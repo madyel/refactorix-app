@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { FileTree, FileNode } from "@/components/ide/FileTree";
 import { CodeEditor } from "@/components/ide/CodeEditor";
+import { TerminalPanel } from "@/components/ide/TerminalPanel";
 import { AiChat } from "@/components/ide/AiChat";
 import { sampleFiles } from "@/components/ide/sampleFiles";
 import { Code2, Sparkles } from "lucide-react";
@@ -83,13 +84,18 @@ const Index = () => {
 
         {/* Code Editor */}
         <ResizablePanel defaultSize={52} minSize={30}>
-          <CodeEditor
-            openTabs={openTabs}
-            activeTab={activeTab}
-            onTabSelect={setActiveTab}
-            onTabClose={handleTabClose}
-            onContentChange={handleContentChange}
-          />
+          <div className="flex flex-col h-full">
+            <div className="flex-1 overflow-hidden">
+              <CodeEditor
+                openTabs={openTabs}
+                activeTab={activeTab}
+                onTabSelect={setActiveTab}
+                onTabClose={handleTabClose}
+                onContentChange={handleContentChange}
+              />
+            </div>
+            <TerminalPanel />
+          </div>
         </ResizablePanel>
 
         <ResizableHandle className="w-px bg-border hover:bg-primary/50 transition-colors" />
