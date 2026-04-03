@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
 
 interface OpenTab {
   name: string;
@@ -12,11 +13,11 @@ interface CodeEditorProps {
   activeTab: string | null;
   onTabSelect: (path: string) => void;
   onTabClose: (path: string) => void;
+  onContentChange?: (path: string, content: string) => void;
 }
 
 const highlightLine = (line: string): React.ReactNode[] => {
   const tokens: React.ReactNode[] = [];
-  // Simple syntax highlighting via regex
   const patterns: [RegExp, string][] = [
     [/\/\/.*/g, "text-ide-comment"],
     [/"[^"]*"|'[^']*'|`[^`]*`/g, "text-ide-string"],
@@ -27,11 +28,9 @@ const highlightLine = (line: string): React.ReactNode[] => {
     [/\b([a-z][a-zA-Z0-9]*)\s*(?=\()/g, "text-ide-function"],
   ];
 
-  // Simple approach: just return colored spans for known tokens
   let remaining = line;
   let key = 0;
 
-  // Comment takes priority
   const commentIdx = remaining.indexOf("//");
   if (commentIdx !== -1) {
     const before = remaining.slice(0, commentIdx);
@@ -46,7 +45,6 @@ const highlightLine = (line: string): React.ReactNode[] => {
 };
 
 const highlightSegment = (text: string, patterns: [RegExp, string][]): React.ReactNode => {
-  // Very basic: apply patterns sequentially via split
   let parts: React.ReactNode[] = [text];
 
   for (const [pattern, className] of patterns) {
@@ -80,8 +78,50 @@ const highlightSegment = (text: string, patterns: [RegExp, string][]): React.Rea
   return <>{parts}</>;
 };
 
-export const CodeEditor = ({ openTabs, activeTab, onTabSelect, onTabClose }: CodeEditorProps) => {
+export const CodeEditor = ({ openTabs, activeTab, onTabSelect, onTabClose, onContentChange }: CodeEditorProps) => {
   const activeFile = openTabs.find((t) => t.path === activeTab);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const highlightRef = useRef<HTMLDivElement>(null);
+  const [cursorLine, setCursorLine] = useState(0);
+  const [cursorCol, setCursorCol] = useState(0);
+
+  const handleScroll = useCallback(() => {
+    if (textareaRef.current && highlightRef.current) {
+      highlightRef.current.scrollTop = textareaRef.current.scrollTop;
+      highlightRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
+  }, []);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (activeTab && onContentChange) {
+      onContentChange(activeTab, e.target.value);
+    }
+  }, [activeTab, onContentChange]);
+
+  const updateCursor = useCallback((el: HTMLTextAreaElement) => {
+    const pos = el.selectionStart;
+    const text = el.value.substring(0, pos);
+    const lines = text.split("\n");
+    setCursorLine(lines.length);
+    setCursorCol(lines[lines.length - 1].length + 1);
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const el = e.currentTarget;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const value = el.value;
+      const newValue = value.substring(0, start) + "  " + value.substring(end);
+      if (onContentChange && activeTab) {
+        onContentChange(activeTab, newValue);
+        requestAnimationFrame(() => {
+          el.selectionStart = el.selectionEnd = start + 2;
+        });
+      }
+    }
+  }, [activeTab, onContentChange]);
 
   if (!activeFile) {
     return (
@@ -127,22 +167,61 @@ export const CodeEditor = ({ openTabs, activeTab, onTabSelect, onTabClose }: Cod
         ))}
       </div>
 
-      {/* Code content */}
-      <div className="flex-1 overflow-auto font-mono text-sm">
-        <table className="w-full border-collapse">
-          <tbody>
-            {lines.map((line, i) => (
-              <tr key={i} className="hover:bg-ide-line-highlight transition-colors">
-                <td className="select-none text-right pr-4 pl-4 py-0 text-ide-line-number w-12 align-top text-xs leading-6">
+      {/* Code content - overlay approach */}
+      <div className="flex-1 overflow-hidden relative font-mono text-sm">
+        <div className="absolute inset-0 flex">
+          {/* Line numbers */}
+          <div className="flex-shrink-0 w-12 bg-ide-panel overflow-hidden" ref={(el) => {
+            if (el && textareaRef.current) {
+              const ta = textareaRef.current;
+              const sync = () => { el.scrollTop = ta.scrollTop; };
+              ta.addEventListener("scroll", sync);
+            }
+          }}>
+            <div className="pt-0">
+              {lines.map((_, i) => (
+                <div
+                  key={i}
+                  className={`text-right pr-4 pl-2 text-xs leading-6 select-none ${
+                    cursorLine === i + 1 ? "text-foreground" : "text-ide-line-number"
+                  }`}
+                >
                   {i + 1}
-                </td>
-                <td className="py-0 pr-4 leading-6 whitespace-pre text-ide-variable">
-                  {highlightLine(line)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Editor area */}
+          <div className="flex-1 relative overflow-hidden">
+            {/* Syntax highlight layer */}
+            <div
+              ref={highlightRef}
+              className="absolute inset-0 overflow-hidden pointer-events-none whitespace-pre text-ide-variable leading-6"
+              aria-hidden="true"
+            >
+              {lines.map((line, i) => (
+                <div key={i} className={`px-2 leading-6 ${cursorLine === i + 1 ? "bg-ide-line-highlight" : ""}`}>
+                  {highlightLine(line || " ")}
+                </div>
+              ))}
+            </div>
+
+            {/* Textarea layer */}
+            <textarea
+              ref={textareaRef}
+              value={activeFile.content}
+              onChange={handleChange}
+              onScroll={handleScroll}
+              onKeyDown={handleKeyDown}
+              onKeyUp={(e) => updateCursor(e.currentTarget)}
+              onClick={(e) => updateCursor(e.currentTarget)}
+              spellCheck={false}
+              className="absolute inset-0 w-full h-full resize-none bg-transparent text-transparent caret-foreground leading-6 px-2 outline-none font-mono text-sm selection:bg-primary/30 z-10"
+              style={{ tabSize: 2 }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Status bar */}
@@ -152,7 +231,7 @@ export const CodeEditor = ({ openTabs, activeTab, onTabSelect, onTabClose }: Cod
           <span>UTF-8</span>
         </div>
         <div className="flex gap-3">
-          <span>Ln {lines.length}</span>
+          <span>Ln {cursorLine}, Col {cursorCol}</span>
           <span>Spaces: 2</span>
         </div>
       </div>
