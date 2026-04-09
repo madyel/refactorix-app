@@ -1,111 +1,19 @@
-import { useState, useCallback } from "react";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { FileTree, FileNode } from "@/components/ide/FileTree";
-import { CodeEditor } from "@/components/ide/CodeEditor";
-import { TerminalPanel } from "@/components/ide/TerminalPanel";
-import { AiChat } from "@/components/ide/AiChat";
-import { sampleFiles } from "@/components/ide/sampleFiles";
-import { Code2, Sparkles } from "lucide-react";
-
-interface OpenTab {
-  name: string;
-  path: string;
-  content: string;
-  language?: string;
-}
+import { BuilderHeader } from "@/components/project-builder/BuilderHeader";
+import { BuilderStatusPanel } from "@/components/project-builder/BuilderStatusPanel";
+import { ProjectBuilderForm } from "@/components/project-builder/ProjectBuilderForm";
+import { useProjectBuilderForm } from "@/hooks/use-project-builder-form";
 
 const Index = () => {
-  const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
-  const [activeTab, setActiveTab] = useState<string | null>(null);
-  const [selectedPath, setSelectedPath] = useState<string | undefined>();
-
-  const handleFileSelect = useCallback((file: FileNode, path: string) => {
-    if (file.type !== "file") return;
-    setSelectedPath(path);
-
-    const existingTab = openTabs.find((t) => t.path === path);
-    if (existingTab) {
-      setActiveTab(path);
-      return;
-    }
-
-    const newTab: OpenTab = {
-      name: file.name,
-      path,
-      content: file.content || "",
-      language: file.language,
-    };
-    setOpenTabs((prev) => [...prev, newTab]);
-    setActiveTab(path);
-  }, [openTabs]);
-
-  const handleTabClose = useCallback((path: string) => {
-    setOpenTabs((prev) => {
-      const filtered = prev.filter((t) => t.path !== path);
-      if (activeTab === path) {
-        setActiveTab(filtered.length > 0 ? filtered[filtered.length - 1].path : null);
-      }
-      return filtered;
-    });
-  }, [activeTab]);
-
-  const handleContentChange = useCallback((path: string, content: string) => {
-    setOpenTabs((prev) =>
-      prev.map((t) => (t.path === path ? { ...t, content } : t))
-    );
-  }, []);
+  const { values, actions } = useProjectBuilderForm();
 
   return (
-    <div className="flex h-screen flex-col">
-      {/* Title bar */}
-      <div className="flex h-10 items-center justify-between border-b border-border bg-ide-header px-4">
-        <div className="flex items-center gap-2">
-          <Code2 className="h-5 w-5 text-primary" />
-          <span className="text-sm font-bold text-foreground">SmartCode IDE</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5 text-accent" />
-          <span className="text-xs text-muted-foreground">AI-Powered</span>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
-        {/* File Tree */}
-        <ResizablePanel defaultSize={18} minSize={12} maxSize={30}>
-          <FileTree
-            files={sampleFiles}
-            onFileSelect={handleFileSelect}
-            selectedPath={selectedPath}
-          />
-        </ResizablePanel>
-
-        <ResizableHandle className="w-px bg-border hover:bg-primary/50 transition-colors" />
-
-        {/* Code Editor */}
-        <ResizablePanel defaultSize={52} minSize={30}>
-          <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-hidden">
-              <CodeEditor
-                openTabs={openTabs}
-                activeTab={activeTab}
-                onTabSelect={setActiveTab}
-                onTabClose={handleTabClose}
-                onContentChange={handleContentChange}
-              />
-            </div>
-            <TerminalPanel />
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle className="w-px bg-border hover:bg-primary/50 transition-colors" />
-
-        {/* AI Chat */}
-        <ResizablePanel defaultSize={30} minSize={20} maxSize={45}>
-          <AiChat />
-        </ResizablePanel>
-      </ResizablePanelGroup>
-    </div>
+    <main className="min-h-screen bg-[#070d24] p-5 text-slate-100 sm:p-8">
+      <section className="mx-auto w-full max-w-[1720px] rounded-2xl border border-[#2b355f] bg-[radial-gradient(circle_at_55%_85%,rgba(38,76,192,0.22),transparent_42%),linear-gradient(180deg,#121a3d,#0e1536)] p-5 shadow-[0_0_0_1px_rgba(93,114,182,0.15),0_18px_70px_rgba(2,6,23,0.45)] sm:p-7 lg:p-9">
+        <BuilderHeader />
+        <BuilderStatusPanel model={values.model} onModelChange={actions.setModel} />
+        <ProjectBuilderForm values={values} actions={actions} />
+      </section>
+    </main>
   );
 };
 
