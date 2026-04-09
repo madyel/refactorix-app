@@ -38,7 +38,7 @@ const historyItems = [
 
 export const ProjectBuilderForm = ({ values, actions }: ProjectBuilderFormProps) => {
   return (
-    <section className="mx-auto w-full max-w-4xl space-y-6">
+    <section className="mx-auto w-full max-w-3xl space-y-4">
       <form className="rounded-3xl border border-white/10 bg-[#242424]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur">
         <label className="block">
           <span className="sr-only">Descrivi un'attività</span>
@@ -128,6 +128,13 @@ export const ProjectBuilderForm = ({ values, actions }: ProjectBuilderFormProps)
           </div>
         </div>
       </form>
+
+      <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#2b2b2b]/80 px-4 py-3 text-sm text-slate-200">
+        <p className="font-medium">Configura Codex con Slack</p>
+        <button type="button" className="text-slate-400 transition hover:text-slate-200">
+          ✕
+        </button>
+      </div>
 
       <div className="rounded-2xl border border-white/10 bg-[#242424]/55 p-3 text-slate-200">
         <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-2">

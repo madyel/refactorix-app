@@ -28,7 +28,7 @@ const statusRows = [
 
 export const BuilderStatusPanel = ({ model, onModelChange }: BuilderStatusPanelProps) => {
   return (
-    <aside className="absolute right-7 top-28 z-10 hidden w-full max-w-sm rounded-2xl border border-white/10 bg-[#171717]/90 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur md:block">
+    <aside className="mb-6 w-full rounded-2xl border border-white/10 bg-[#171717]/90 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur lg:absolute lg:right-8 lg:top-24 lg:z-10 lg:mb-0 lg:max-w-sm">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-100">System status</h2>
         <button type="button" className="text-xs text-slate-400 transition hover:text-slate-200">
