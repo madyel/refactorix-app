@@ -1,8 +1,9 @@
 # ⚡ Refactorix: The Core Logic Architect
 
-![Version](https://img.shields.io/badge/version-0.0.1--stable-cyan?style=for-the-badge)
-![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
-![Status](https://img.shields.io/badge/status-optimized-success?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-0.0.1--alpha-0078D4?style=for-the-badge&logo=semver)
+![License](https://img.shields.io/badge/license-MIT-41AD49?style=for-the-badge&logo=opensourceinitiative&logoColor=white)
+![Platform](https://img.shields.io/badge/platform-node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![Build](https://img.shields.io/badge/build-passing-00b894?style=for-the-badge&logo=github-actions&logoColor=white)
 
 > "Refactorix doesn't just clean code; it redefines the DNA of your architecture."
 
@@ -12,10 +13,10 @@
 
 ## 🛰️ Core Capabilities
 
-* **🔍 Deep Static Analysis:** Scans your entire AST to identify bottlenecks and anti-patterns.
-* **♻️ Auto-Refactor Engine:** Intelligent logic replacement that maintains functional parity.
-* **📦 Dependency Graphing:** Visualize and decouple tangled module relationships.
-* **🚀 Performance Profiling:** Benchmarks your logic gates before and after the transformation.
+- **🔍 Deep Static Analysis:** Scans your entire AST to identify bottlenecks and anti-patterns.
+- **♻️ Auto-Refactor Engine:** Intelligent logic replacement that maintains functional parity.
+- **📦 Dependency Graphing:** Visualize and decouple tangled module relationships.
+- **🚀 Performance Profiling:** Benchmarks your logic gates before and after the transformation.
 
 ---
 
@@ -32,10 +33,12 @@ Where $C$ represents the cyclomatic complexity of your modules over development 
 ## 🛠️ Installation & Setup
 
 ### Requirements
-* **Node.js** v18.0 or higher
-* **Git** (for version control integration)
+
+- **Node.js** v18.0 or higher
+- **Git** (for version control integration)
 
 ### Deployment
+
 ```bash
 # Clone the repository
 git clone [https://github.com/your-username/refactorix.git](https://github.com/your-username/refactorix.git)
@@ -48,3 +51,4 @@ npm install
 
 # Execute the architect
 npm run start:core
+```
