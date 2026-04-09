@@ -10,7 +10,7 @@ export const BuilderHeader = () => {
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/5">
             <Code2 className="h-4 w-4" />
           </span>
-          <span className="text-lg font-semibold">Codex</span>
+          <span className="text-lg font-semibold">Refactorix</span>
         </div>
 
         <div className="flex items-center gap-5 pt-1 text-sm text-slate-400">
@@ -31,7 +31,10 @@ export const BuilderHeader = () => {
           <button type="button" className="transition hover:text-white">
             <Bell className="h-4 w-4" />
           </button>
-          <button type="button" className="text-slate-200 transition hover:text-white">
+          <button
+            type="button"
+            className="text-slate-200 transition hover:text-white"
+          >
             <UserCircle2 className="h-6 w-6" />
           </button>
         </div>
@@ -39,10 +42,11 @@ export const BuilderHeader = () => {
 
       <div className="mx-auto max-w-4xl space-y-3 text-center">
         <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
-          Quale codice dovremmo scrivere adesso?
+          Ciao Deploy Leader, che progetto vuoi creare oggi?
         </h1>
         <p className="text-base text-slate-400 md:text-lg">
-          Definisci progetto, stack e feature in un unico flusso per generare il framework software.
+          Definisci progetto, stack e feature in un unico flusso per generare il
+          framework software.
         </p>
       </div>
     </header>
