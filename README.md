@@ -1,3 +1,50 @@
-# Welcome to your Lovable project
+# ⚡ Refactorix: The Core Logic Architect
 
-TODO: Document your project here
+![Version](https://img.shields.io/badge/version-0.0.1--stable-cyan?style=for-the-badge)
+![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-optimized-success?style=for-the-badge)
+
+> "Refactorix doesn't just clean code; it redefines the DNA of your architecture."
+
+**Refactorix** is an advanced code intelligence engine designed to transform legacy complexity into streamlined, high-performance logic. It serves as a bridge between chaotic source files and a perfectly optimized codebase.
+
+---
+
+## 🛰️ Core Capabilities
+
+* **🔍 Deep Static Analysis:** Scans your entire AST to identify bottlenecks and anti-patterns.
+* **♻️ Auto-Refactor Engine:** Intelligent logic replacement that maintains functional parity.
+* **📦 Dependency Graphing:** Visualize and decouple tangled module relationships.
+* **🚀 Performance Profiling:** Benchmarks your logic gates before and after the transformation.
+
+---
+
+## ⚙️ Technical Blueprint
+
+Refactorix utilizes a multi-pass optimization strategy. The complexity reduction is modeled by the following efficiency gain ratio:
+
+$$E = \lim_{t \to \infty} \frac{C_{legacy} - C_{refined}}{C_{legacy}}$$
+
+Where $C$ represents the cyclomatic complexity of your modules over development time $t$.
+
+---
+
+## 🛠️ Installation & Setup
+
+### Requirements
+* **Node.js** v18.0 or higher
+* **Git** (for version control integration)
+
+### Deployment
+```bash
+# Clone the repository
+git clone [https://github.com/your-username/refactorix.git](https://github.com/your-username/refactorix.git)
+
+# Enter the engine room
+cd refactorix
+
+# Initialize core modules
+npm install
+
+# Execute the architect
+npm run start:core
