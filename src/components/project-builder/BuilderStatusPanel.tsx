@@ -5,41 +5,62 @@ interface BuilderStatusPanelProps {
   onModelChange: (value: string) => void;
 }
 
+const statusRows = [
+  {
+    label: "Ollama",
+    value: "Offline",
+    detail: "MISSING_TOKEN · lat n/a",
+    tone: "rose",
+  },
+  {
+    label: "Qdrant",
+    value: "Offline",
+    detail: "MISSING_TOKEN · lat n/a",
+    tone: "rose",
+  },
+  {
+    label: "Temporal",
+    value: "Online",
+    detail: "localhost:7233 · queue ai-engineer-runs",
+    tone: "emerald",
+  },
+] as const;
+
 export const BuilderStatusPanel = ({ model, onModelChange }: BuilderStatusPanelProps) => {
   return (
-    <div className="space-y-4 text-lg leading-tight text-slate-300">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="rounded-full border border-rose-400/30 bg-rose-500/10 px-4 py-2 font-medium text-rose-300">
-          LLM: offline
-        </span>
-        <p className="min-w-[300px] flex-1">
-          Ollama non raggiungibile (n/a) · lat=n/ams · err=MISSING_TOKEN: Missing bearer token | Use Authorization:
-          Bearer {'<'}token{'>'} or authenticated session cookie
-        </p>
-        <span className="rounded-full border border-rose-400/30 bg-rose-500/10 px-4 py-2 font-medium text-rose-300">
-          Qdrant: offline
-        </span>
+    <aside className="absolute right-7 top-28 z-10 hidden w-full max-w-sm rounded-2xl border border-white/10 bg-[#171717]/90 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur md:block">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-100">System status</h2>
+        <button type="button" className="text-xs text-slate-400 transition hover:text-slate-200">
+          Refresh
+        </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="min-w-[300px] flex-1">
-          Qdrant non raggiungibile (n/a) · lat=n/ams · err=MISSING_TOKEN: Missing bearer token | Use Authorization:
-          Bearer {'<'}token{'>'} or authenticated session cookie · advice=n/a
-        </p>
-        <span className="rounded-full border border-emerald-400/35 bg-emerald-500/10 px-4 py-2 font-medium text-emerald-300">
-          Temporal: online (temporal)
-        </span>
+      <div className="space-y-2">
+        {statusRows.map((item) => (
+          <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="mb-1 flex items-center justify-between text-sm">
+              <span className="text-slate-200">{item.label}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  item.tone === "emerald"
+                    ? "bg-emerald-500/15 text-emerald-300"
+                    : "bg-rose-500/15 text-rose-300"
+                }`}
+              >
+                {item.value}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">{item.detail}</p>
+          </div>
+        ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="min-w-[300px] flex-1">
-          Temporal @ localhost:7233 · ns=default · q=ai-engineer-runs · lat=0.1ms · queued_age=n/a
-        </p>
-
+      <div className="mt-3 space-y-2">
         <select
           value={model}
           onChange={(event) => onModelChange(event.target.value)}
-          className="h-14 min-w-[320px] rounded-xl border border-[#50609c] bg-[#0a1436] px-4 text-slate-100 outline-none ring-0 transition focus:border-blue-400"
+          className="h-10 w-full rounded-lg border border-white/10 bg-[#111111] px-3 text-sm text-slate-100 outline-none transition focus:border-blue-400"
         >
           <option value="">Seleziona modello</option>
           {modelOptions.map((option) => (
@@ -48,14 +69,13 @@ export const BuilderStatusPanel = ({ model, onModelChange }: BuilderStatusPanelP
             </option>
           ))}
         </select>
-
-        <button className="h-14 rounded-xl border border-[#50609c] bg-[#162247] px-6 font-medium text-slate-100 transition hover:bg-[#1d2c56]">
+        <button
+          type="button"
+          className="h-10 w-full rounded-lg border border-white/10 bg-white/[0.04] text-sm font-medium text-slate-100 transition hover:bg-white/[0.08]"
+        >
           Usa modello
         </button>
-        <button className="h-14 rounded-xl border border-[#50609c] bg-[#162247] px-6 font-medium text-slate-100 transition hover:bg-[#1d2c56]">
-          Refresh LLM
-        </button>
       </div>
-    </div>
+    </aside>
   );
 };

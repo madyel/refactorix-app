@@ -7,8 +7,8 @@ const Index = () => {
   const { values, actions } = useProjectBuilderForm();
 
   return (
-    <main className="min-h-screen bg-[#070d24] p-5 text-slate-100 sm:p-8">
-      <section className="mx-auto w-full max-w-[1720px] rounded-2xl border border-[#2b355f] bg-[radial-gradient(circle_at_55%_85%,rgba(38,76,192,0.22),transparent_42%),linear-gradient(180deg,#121a3d,#0e1536)] p-5 shadow-[0_0_0_1px_rgba(93,114,182,0.15),0_18px_70px_rgba(2,6,23,0.45)] sm:p-7 lg:p-9">
+    <main className="min-h-screen bg-[#1b1b1b] p-4 text-slate-100 sm:p-7">
+      <section className="relative mx-auto w-full max-w-[1720px] overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_30%_10%,rgba(255,255,255,0.08),transparent_35%),linear-gradient(180deg,#1f1f1f,#171717)] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.45)] sm:p-8">
         <BuilderHeader />
         <BuilderStatusPanel model={values.model} onModelChange={actions.setModel} />
         <ProjectBuilderForm values={values} actions={actions} />
