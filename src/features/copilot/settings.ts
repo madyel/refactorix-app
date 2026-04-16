@@ -8,10 +8,25 @@ export const COPILOT_SETTINGS_STORAGE_KEY = "copilot_settings";
 
 const isBrowser = typeof window !== "undefined";
 
+const ensureProtocol = (value: string): string => {
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^(localhost|127\.0\.0\.1|\d+\.\d+\.\d+\.\d+)(:\d+)?/i.test(value)) {
+    return `http://${value}`;
+  }
+  return value;
+};
+
 const normalizeUrl = (value?: string): string | undefined => {
   if (!value) return undefined;
-  const normalized = value.trim().replace(/\/$/, "");
-  return normalized.length > 0 ? normalized : undefined;
+  const maybeUrl = ensureProtocol(value.trim().replace(/\/$/, ""));
+
+  try {
+    const parsed = new URL(maybeUrl);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined;
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return undefined;
+  }
 };
 
 const normalizeToken = (value?: string): string | undefined => {

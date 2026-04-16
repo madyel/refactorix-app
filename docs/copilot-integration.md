@@ -3,6 +3,7 @@
 ## Environment variables
 
 - `VITE_API_BASE_URL`: base URL backend API (fallback default).
+- Se l'app gira in `file://` (Electron) e non configuri URL, fallback automatico a `http://localhost:8000`.
 - Runtime override da UI in pagina `/settings` (base URL + API token) salvato in `localStorage` con precedenza su env.
 - `VITE_COPILOT_ENABLED`: enables Copilot panel globally.
 - `VITE_COPILOT_APPLY_PATCH_ENABLED`: enables `apply_patch` mode in UI.

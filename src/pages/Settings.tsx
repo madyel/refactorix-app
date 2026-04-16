@@ -8,9 +8,11 @@ const Settings = () => {
   const [apiToken, setApiToken] = useState(initial.apiToken ?? "");
   const [apiKey, setApiKey] = useState(initial.apiKey ?? "");
   const [saved, setSaved] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   const handleSave = () => {
-    saveCopilotSettings({ apiBaseUrl, apiToken, apiKey });
+    const savedSettings = saveCopilotSettings({ apiBaseUrl, apiToken, apiKey });
+    setSaveMessage(savedSettings.apiBaseUrl ? `Base URL attiva: ${savedSettings.apiBaseUrl}` : "Base URL non valida o vuota: sarà usato il fallback runtime.");
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   };
@@ -61,6 +63,7 @@ const Settings = () => {
             Salva configurazione
           </button>
           {saved && <span className="text-xs text-emerald-400">Salvato</span>}
+          {saveMessage && <span className="text-xs text-slate-300">{saveMessage}</span>}
         </div>
 
         <div className="mt-6 flex gap-3">

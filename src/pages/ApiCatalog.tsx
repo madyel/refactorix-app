@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { apiOperations } from "@/api/generated/operations";
 import { invokeCatalogEndpoint, recommendedEndpoints, type CatalogHttpMethod } from "@/features/copilot/catalog-client";
+import { getConfiguredApiBaseUrl } from "@/config/runtime-config";
 
 interface EndpointOption {
   method: CatalogHttpMethod;
@@ -25,6 +26,7 @@ const ApiCatalog = () => {
   const [body, setBody] = useState("{}");
   const [result, setResult] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const configuredBaseUrl = getConfiguredApiBaseUrl();
 
   const callEndpoint = async () => {
     setError("");
@@ -39,7 +41,11 @@ const ApiCatalog = () => {
       });
       setResult(JSON.stringify(response, null, 2));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      const message = err instanceof Error ? err.message : "Unknown error";
+      const remediation = message.includes("NetworkError") || message.includes("Failed to fetch")
+        ? `Network error. Verifica Settings > Copilot (Base URL/token/api-key). Base URL attuale: ${configuredBaseUrl || "(vuota)"}`
+        : message;
+      setError(remediation);
       setResult("");
     }
   };
@@ -49,6 +55,7 @@ const ApiCatalog = () => {
       <section className="mx-auto max-w-5xl rounded-2xl border border-white/10 bg-black/20 p-6">
         <h1 className="text-2xl font-semibold">Copilot REST API Catalog</h1>
         <p className="mt-2 text-sm text-slate-300">Invoca endpoint existing/recommended direttamente dallo Smart IDE.</p>
+        <p className="mt-1 text-xs text-slate-400">Base URL attuale: {configuredBaseUrl || "(vuota)"}</p>
 
         <div className="mt-6 grid gap-3 md:grid-cols-2">
           <select value={`${method} ${path}`} onChange={(e) => {

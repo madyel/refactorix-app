@@ -7,12 +7,17 @@ describe("copilot settings storage", () => {
   });
 
   it("saves and normalizes url/token", () => {
-    const saved = saveCopilotSettings({ apiBaseUrl: "https://copilot.local/", apiToken: "  token-1 " });
+    const saved = saveCopilotSettings({ apiBaseUrl: "localhost:8000/", apiToken: "  token-1 " });
 
-    expect(saved).toEqual({ apiBaseUrl: "https://copilot.local", apiToken: "token-1" });
+    expect(saved).toEqual({ apiBaseUrl: "http://localhost:8000", apiToken: "token-1", apiKey: undefined });
 
     const stored = window.localStorage.getItem(COPILOT_SETTINGS_STORAGE_KEY);
-    expect(stored).toContain("copilot.local");
+    expect(stored).toContain("localhost:8000");
+  });
+
+  it("drops invalid base url values", () => {
+    const saved = saveCopilotSettings({ apiBaseUrl: "not-a-url" });
+    expect(saved.apiBaseUrl).toBeUndefined();
   });
 
   it("loads empty object when value is corrupted", () => {
