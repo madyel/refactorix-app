@@ -54,16 +54,42 @@ const sanitizeSettings = (value: Partial<CopilotSettings>): CopilotSettings => (
   apiKey: normalizeToken(value.apiKey),
 });
 
+
+const probeTimeoutMs = 8000;
+
+const classifyNetworkError = async (baseUrl: string, endpoint: string, originalMessage: string) => {
+  if (isBrowser && window.location.protocol === "https:" && baseUrl.startsWith("http://")) {
+    return `${originalMessage} · Probabile mixed-content (pagina HTTPS -> API HTTP bloccata dal browser).`;
+  }
+
+  try {
+    await fetch(`${baseUrl}${endpoint}`, { method: "GET", mode: "no-cors" });
+    return `${originalMessage} · Endpoint raggiungibile ma probabilmente bloccato da CORS.`;
+  } catch {
+    return `${originalMessage} · Verifica rete/VPN/firewall e che l'API sia in ascolto su ${baseUrl}.`;
+  }
+};
+
 const buildAuthHeaders = (settings: CopilotSettings): HeadersInit => ({
   ...(settings.apiToken ? { Authorization: `Bearer ${settings.apiToken}` } : {}),
   ...(settings.apiKey ? { "x-api-key": settings.apiKey } : {}),
 });
 
 const probe = async (baseUrl: string, endpoint: string, headers: HeadersInit): Promise<CopilotConnectionProbe> => {
+<<<<<<< codex/integrate-copilot-into-smart-ide
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), probeTimeoutMs);
+
+=======
+>>>>>>> main
   try {
     const response = await fetch(`${baseUrl}${endpoint}`, {
       method: "GET",
       headers,
+<<<<<<< codex/integrate-copilot-into-smart-ide
+      signal: controller.signal,
+=======
+>>>>>>> main
     });
 
     if (!response.ok) {
@@ -82,11 +108,24 @@ const probe = async (baseUrl: string, endpoint: string, headers: HeadersInit): P
       message: "OK",
     };
   } catch (error) {
+<<<<<<< codex/integrate-copilot-into-smart-ide
+    const rawMessage = error instanceof Error ? error.message : "Network error";
+    const message = await classifyNetworkError(baseUrl, endpoint, rawMessage);
+
+    return {
+      endpoint,
+      ok: false,
+      message,
+    };
+  } finally {
+    clearTimeout(timeout);
+=======
     return {
       endpoint,
       ok: false,
       message: error instanceof Error ? error.message : "Network error",
     };
+>>>>>>> main
   }
 };
 
