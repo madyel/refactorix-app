@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { loadCopilotSettings, saveCopilotSettings } from "@/features/copilot/settings";
+import { loadCopilotSettings, probeCopilotConnection, saveCopilotSettings } from "@/features/copilot/settings";
 
 const Settings = () => {
   const initial = useMemo(() => loadCopilotSettings(), []);
@@ -9,12 +9,28 @@ const Settings = () => {
   const [apiKey, setApiKey] = useState(initial.apiKey ?? "");
   const [saved, setSaved] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [connectionResult, setConnectionResult] = useState<string>("");
 
   const handleSave = () => {
     const savedSettings = saveCopilotSettings({ apiBaseUrl, apiToken, apiKey });
     setSaveMessage(savedSettings.apiBaseUrl ? `Base URL attiva: ${savedSettings.apiBaseUrl}` : "Base URL non valida o vuota: sarà usato il fallback runtime.");
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
+  };
+
+  const handleConnectionTest = async () => {
+    setIsTestingConnection(true);
+    setConnectionResult("Testing...");
+
+    const result = await probeCopilotConnection({ apiBaseUrl, apiToken, apiKey });
+    const lines = [
+      `Base URL: ${result.baseUrl ?? "(invalid)"}`,
+      ...result.probes.map((probe) => `${probe.ok ? "✅" : "❌"} ${probe.endpoint} · ${probe.message}${probe.status ? ` (${probe.status})` : ""}`),
+    ];
+
+    setConnectionResult(lines.join("\n"));
+    setIsTestingConnection(false);
   };
 
   return (
@@ -58,13 +74,26 @@ const Settings = () => {
           </div>
         </div>
 
-        <div className="mt-6 flex items-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <button onClick={handleSave} className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground">
             Salva configurazione
+          </button>
+          <button
+            onClick={handleConnectionTest}
+            className="rounded border border-white/15 px-4 py-2 text-sm hover:bg-white/10 disabled:opacity-60"
+            disabled={isTestingConnection}
+          >
+            {isTestingConnection ? "Testing..." : "Test connessione Copilot"}
           </button>
           {saved && <span className="text-xs text-emerald-400">Salvato</span>}
           {saveMessage && <span className="text-xs text-slate-300">{saveMessage}</span>}
         </div>
+
+        {connectionResult && (
+          <pre className="mt-4 overflow-auto rounded border border-white/10 bg-[#090909] p-3 text-xs">
+            {connectionResult}
+          </pre>
+        )}
 
         <div className="mt-6 flex gap-3">
           <Link to="/" className="rounded border border-white/15 px-3 py-2 text-sm hover:bg-white/10">Torna a App</Link>

@@ -11,6 +11,11 @@
 
 - Copilot API Token: configurabile da `/settings`, inviato come header `Authorization: Bearer <token>`.
 
+## Settings UX
+
+- Pagina `/settings` include pulsante **Test connessione Copilot**.
+- Effettua probe su `/health` e `/v1/system/ollama/status` con gli header configurati (`Authorization`, `x-api-key`).
+
 ## API Catalog UI
 
 - Pagina `/api-catalog`: invoca endpoint Existing/Recommended (metodo/path/query/pathParams/body).

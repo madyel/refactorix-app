@@ -4,6 +4,19 @@ export interface CopilotSettings {
   apiKey?: string;
 }
 
+export interface CopilotConnectionProbe {
+  endpoint: string;
+  ok: boolean;
+  status?: number;
+  message: string;
+}
+
+export interface CopilotConnectionResult {
+  ok: boolean;
+  baseUrl?: string;
+  probes: CopilotConnectionProbe[];
+}
+
 export const COPILOT_SETTINGS_STORAGE_KEY = "copilot_settings";
 
 const isBrowser = typeof window !== "undefined";
@@ -40,6 +53,71 @@ const sanitizeSettings = (value: Partial<CopilotSettings>): CopilotSettings => (
   apiToken: normalizeToken(value.apiToken),
   apiKey: normalizeToken(value.apiKey),
 });
+
+const buildAuthHeaders = (settings: CopilotSettings): HeadersInit => ({
+  ...(settings.apiToken ? { Authorization: `Bearer ${settings.apiToken}` } : {}),
+  ...(settings.apiKey ? { "x-api-key": settings.apiKey } : {}),
+});
+
+const probe = async (baseUrl: string, endpoint: string, headers: HeadersInit): Promise<CopilotConnectionProbe> => {
+  try {
+    const response = await fetch(`${baseUrl}${endpoint}`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      return {
+        endpoint,
+        ok: false,
+        status: response.status,
+        message: `HTTP ${response.status}`,
+      };
+    }
+
+    return {
+      endpoint,
+      ok: true,
+      status: response.status,
+      message: "OK",
+    };
+  } catch (error) {
+    return {
+      endpoint,
+      ok: false,
+      message: error instanceof Error ? error.message : "Network error",
+    };
+  }
+};
+
+export const probeCopilotConnection = async (candidate: Partial<CopilotSettings>): Promise<CopilotConnectionResult> => {
+  const settings = sanitizeSettings(candidate);
+
+  if (!settings.apiBaseUrl) {
+    return {
+      ok: false,
+      probes: [
+        {
+          endpoint: "(config)",
+          ok: false,
+          message: "Base URL non valida o assente.",
+        },
+      ],
+    };
+  }
+
+  const headers = buildAuthHeaders(settings);
+  const probes = await Promise.all([
+    probe(settings.apiBaseUrl, "/health", headers),
+    probe(settings.apiBaseUrl, "/v1/system/ollama/status", headers),
+  ]);
+
+  return {
+    ok: probes.every((item) => item.ok),
+    baseUrl: settings.apiBaseUrl,
+    probes,
+  };
+};
 
 export const loadCopilotSettings = (): CopilotSettings => {
   if (!isBrowser) return {};
