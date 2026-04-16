@@ -65,3 +65,4 @@
   - su pagina HTTPS con API HTTP: probable mixed-content block.
   - endpoint raggiungibile in `no-cors` ma fallisce in fetch normale: probabile CORS backend.
   - altrimenti: verifica rete/VPN/firewall e bind host/porta API.
+

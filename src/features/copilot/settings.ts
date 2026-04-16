@@ -79,10 +79,14 @@ const probe = async (baseUrl: string, endpoint: string, headers: HeadersInit): P
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), probeTimeoutMs);
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), probeTimeoutMs);
+
   try {
     const response = await fetch(`${baseUrl}${endpoint}`, {
       method: "GET",
       headers,
+      signal: controller.signal,
       signal: controller.signal,
     });
 
