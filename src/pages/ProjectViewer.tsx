@@ -2,7 +2,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { FileTree } from "@/components/ide/FileTree";
 import { CodeEditor } from "@/components/ide/CodeEditor";
 import { TerminalPanel } from "@/components/ide/TerminalPanel";
-import { AiChat } from "@/components/ide/AiChat";
+import { CopilotPanel } from "@/components/ide/CopilotPanel";
 import { sampleFiles } from "@/components/ide/sampleFiles";
 import { Code2, Sparkles } from "lucide-react";
 import { useProjectViewerTabs } from "@/hooks/use-project-viewer-tabs";
@@ -56,7 +56,7 @@ const ProjectViewer = () => {
         <ResizableHandle className="w-px bg-border transition-colors hover:bg-primary/50" />
 
         <ResizablePanel defaultSize={30} minSize={20} maxSize={45}>
-          <AiChat />
+          <CopilotPanel />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
