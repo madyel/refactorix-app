@@ -1,6 +1,11 @@
 import { Bell, Code2, Cog, UserCircle2 } from "lucide-react";
+import { NavLink } from "@/components/NavLink";
 
-const topLinks = ["Codice", "App", "Documenti"];
+const topLinks = [
+  { label: "Codice", to: "/codice" },
+  { label: "App", to: "/app" },
+  { label: "Documenti", to: "/documenti" },
+];
 
 export const BuilderHeader = () => {
   return (
@@ -16,13 +21,14 @@ export const BuilderHeader = () => {
         <div className="flex items-center gap-5 pt-1 text-sm text-slate-400">
           <nav className="hidden items-center gap-5 md:flex">
             {topLinks.map((link) => (
-              <button
-                key={link}
-                type="button"
+              <NavLink
+                key={link.label}
+                to={link.to}
                 className="font-medium transition hover:text-white"
+                activeClassName="text-white"
               >
-                {link}
-              </button>
+                {link.label}
+              </NavLink>
             ))}
           </nav>
           <button type="button" className="transition hover:text-white">

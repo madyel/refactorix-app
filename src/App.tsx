@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import ProjectViewer from "./pages/ProjectViewer.tsx";
+import Documents from "./pages/Documents.tsx";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,9 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/project-viewer" element={<ProjectViewer />} />
+          <Route path="/codice" element={<Navigate to="/project-viewer" replace />} />
+          <Route path="/app" element={<Navigate to="/" replace />} />
+          <Route path="/documenti" element={<Documents />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
