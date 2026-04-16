@@ -7,6 +7,7 @@ import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import ProjectViewer from "./pages/ProjectViewer.tsx";
 import Documents from "./pages/Documents.tsx";
+import Settings from "./pages/Settings.tsx";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/codice" element={<Navigate to="/project-viewer" replace />} />
           <Route path="/app" element={<Navigate to="/" replace />} />
           <Route path="/documenti" element={<Documents />} />
+          <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

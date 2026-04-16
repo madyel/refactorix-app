@@ -8,6 +8,7 @@ import {
 import type { ApiOperations, HttpMethod } from "./operations";
 import { apiOperations } from "./operations";
 import { getConfiguredApiBaseUrl } from "@/config/runtime-config";
+import { getCopilotApiToken } from "@/features/copilot/settings";
 
 export type JsonObject = Record<string, unknown>;
 
@@ -84,11 +85,14 @@ async function performRequest<T extends OperationId>(
     config?.query as JsonObject | undefined,
   )}`;
 
+  const token = getCopilotApiToken();
+
   const response = await fetch(url, {
     method,
     signal: config?.signal,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...config?.headers,
     },
     body: config?.body === undefined ? undefined : JSON.stringify(config.body),

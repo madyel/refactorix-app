@@ -31,9 +31,9 @@ export const BuilderHeader = () => {
               </NavLink>
             ))}
           </nav>
-          <button type="button" className="transition hover:text-white">
+          <NavLink to="/settings" className="transition hover:text-white" activeClassName="text-white" aria-label="Apri settings">
             <Cog className="h-4 w-4" />
-          </button>
+          </NavLink>
           <button type="button" className="transition hover:text-white">
             <Bell className="h-4 w-4" />
           </button>

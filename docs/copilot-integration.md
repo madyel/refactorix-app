@@ -3,10 +3,12 @@
 ## Environment variables
 
 - `VITE_API_BASE_URL`: base URL backend API (fallback default).
-- Runtime override da UI (`Copilot API base URL` nel pannello) salvato in `localStorage` con precedenza su env.
+- Runtime override da UI in pagina `/settings` (base URL + API token) salvato in `localStorage` con precedenza su env.
 - `VITE_COPILOT_ENABLED`: enables Copilot panel globally.
 - `VITE_COPILOT_APPLY_PATCH_ENABLED`: enables `apply_patch` mode in UI.
 - `VITE_COPILOT_COMMIT_ENABLED`: enables `commit` mode in UI.
+
+- Copilot API Token: configurabile da `/settings`, inviato come header `Authorization: Bearer <token>`.
 
 ## Endpoint matrix
 
