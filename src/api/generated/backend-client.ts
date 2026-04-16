@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import type { ApiOperations, HttpMethod } from "./operations";
 import { apiOperations } from "./operations";
+import { getConfiguredApiBaseUrl } from "@/config/runtime-config";
 
 export type JsonObject = Record<string, unknown>;
 
@@ -22,7 +23,6 @@ export interface RequestConfig<
   headers?: HeadersInit;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export const buildPath = (template: string, pathParams?: JsonObject): string => {
   if (!pathParams) return template;
@@ -79,7 +79,7 @@ async function performRequest<T extends OperationId>(
   const method: HttpMethod = operation.method;
   const path = operation.path;
 
-  const url = `${API_BASE_URL}${appendQuery(
+  const url = `${getConfiguredApiBaseUrl()}${appendQuery(
     buildPath(path, config?.pathParams as JsonObject | undefined),
     config?.query as JsonObject | undefined,
   )}`;
