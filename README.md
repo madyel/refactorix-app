@@ -52,3 +52,20 @@ npm install
 # Execute the architect
 npm run start:core
 ```
+
+## 🖥️ Desktop Standalone (Electron)
+
+Smart IDE può essere distribuito come applicazione desktop installabile senza richiedere Node.js sul PC dell'utente finale.
+
+```bash
+# Sviluppo desktop (Vite + Electron)
+npm run electron:dev
+
+# Build installer desktop per il sistema corrente
+npm run electron:build
+```
+
+Gli artefatti vengono generati in `release/`.
+
+Per configurare branding (icone), code signing e auto-update consulta: `docs/electron-distribution.md` (icone binarie generate in CI da `assets/icons/icon-template.svg`).
+
