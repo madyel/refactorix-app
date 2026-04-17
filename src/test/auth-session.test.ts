@@ -40,8 +40,24 @@ describe("auth session", () => {
       "http://localhost:8000/v1/auth/session/refresh",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ refresh_token: "refresh" }),
+        body: JSON.stringify({ refresh_token: "refresh", refreshToken: "refresh" }),
       }),
+    );
+  });
+
+  it("falls back to query contract when bootstrap body contract fails", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("{}", { status: 400 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: "from-query", expires_in: 300 }), { status: 200 }));
+
+    const session = await bootstrapAuthSession();
+
+    expect(session?.accessToken).toBe("from-query");
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:8000/v1/auth/session/token?role=operator&subject=smart-ide",
+      expect.objectContaining({ method: "POST" }),
     );
   });
 

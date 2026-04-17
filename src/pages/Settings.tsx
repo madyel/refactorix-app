@@ -15,6 +15,7 @@ const Settings = () => {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionResult, setConnectionResult] = useState<string>("");
   const [sessionInfo, setSessionInfo] = useState(() => loadAuthSession());
+  const [sessionMessage, setSessionMessage] = useState("");
 
   const handleSave = () => {
     const savedSettings = saveCopilotSettings({ apiBaseUrl, apiToken, apiKey, bootstrapRole, bootstrapSubject });
@@ -48,18 +49,33 @@ const Settings = () => {
 
   const handleBootstrapSession = async () => {
     handleSave();
-    const session = await bootstrapAuthSession();
-    setSessionInfo(session);
+    try {
+      const session = await bootstrapAuthSession();
+      setSessionInfo(session);
+      setSessionMessage(session ? "Sessione bootstrap creata con successo." : "Bootstrap non riuscito: verifica API key/endpoint.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Errore bootstrap sessione.";
+      setSessionMessage(message);
+      setSessionInfo(loadAuthSession());
+    }
   };
 
   const handleRefreshSession = async () => {
-    const session = await refreshAuthSession();
-    setSessionInfo(session);
+    try {
+      const session = await refreshAuthSession();
+      setSessionInfo(session);
+      setSessionMessage(session ? "Refresh sessione completato." : "Refresh non riuscito: nessuna sessione valida.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Errore refresh sessione.";
+      setSessionMessage(message);
+      setSessionInfo(loadAuthSession());
+    }
   };
 
   const handleLogout = () => {
     clearAuthSession();
     setSessionInfo(null);
+    setSessionMessage("Sessione locale rimossa.");
   };
 
   return (
@@ -119,6 +135,7 @@ const Settings = () => {
             <button onClick={handleRefreshSession} className="rounded border border-white/15 px-3 py-1.5 hover:bg-white/10">Refresh token</button>
             <button onClick={handleLogout} className="rounded border border-red-400/30 px-3 py-1.5 text-red-300 hover:bg-red-500/10">Logout locale</button>
           </div>
+          {sessionMessage && <div className="mt-2 text-slate-300">{sessionMessage}</div>}
         </div>
 
         {connectionResult && (

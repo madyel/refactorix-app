@@ -94,22 +94,45 @@ export const bootstrapAuthSession = async (): Promise<AuthSession | null> => {
   const settings = loadCopilotSettings();
   if (!settings.apiBaseUrl || !settings.apiKey) return null;
 
-  const payload = await requestWithHeaders(
-    settings.apiBaseUrl,
-    "/v1/auth/session/token",
-    {
-      method: "POST",
-      body: JSON.stringify({
-        role: settings.bootstrapRole ?? "operator",
-        subject: settings.bootstrapSubject ?? "smart-ide",
-      }),
-    },
-    { "x-api-key": settings.apiKey },
-  );
+  const role = settings.bootstrapRole ?? "operator";
+  const subject = settings.bootstrapSubject ?? "smart-ide";
 
-  const session = parseTokenResponse(payload);
-  if (session) saveAuthSession(session);
-  return session;
+  try {
+    const payload = await requestWithHeaders(
+      settings.apiBaseUrl,
+      "/v1/auth/session/token",
+      {
+        method: "POST",
+        body: JSON.stringify({ role, subject }),
+      },
+      { "x-api-key": settings.apiKey },
+    );
+    const session = parseTokenResponse(payload);
+    if (session) {
+      saveAuthSession(session);
+      return session;
+    }
+  } catch {
+    // fallback query-style contract
+  }
+
+  try {
+    const payload = await requestWithHeaders(
+      settings.apiBaseUrl,
+      `/v1/auth/session/token?role=${encodeURIComponent(role)}&subject=${encodeURIComponent(subject)}`,
+      { method: "POST" },
+      { "x-api-key": settings.apiKey },
+    );
+    const session = parseTokenResponse(payload);
+    if (session) {
+      saveAuthSession(session);
+      return session;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 };
 
 export const refreshAuthSession = async (): Promise<AuthSession | null> => {
@@ -124,8 +147,12 @@ export const refreshAuthSession = async (): Promise<AuthSession | null> => {
         "/v1/auth/session/refresh",
         {
           method: "POST",
-          body: JSON.stringify({ refresh_token: current.refreshToken }),
+          body: JSON.stringify({
+            refresh_token: current.refreshToken,
+            refreshToken: current.refreshToken,
+          }),
         },
+        settings.apiKey ? { "x-api-key": settings.apiKey } : {},
       );
       const refreshed = parseTokenResponse(payload);
       if (refreshed) {
