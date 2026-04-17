@@ -16,6 +16,13 @@
 - Pagina `/settings` include pulsante **Test connessione Copilot**.
 - Effettua probe su `/health` e `/v1/system/ollama/status` con gli header configurati (`Authorization`, `x-api-key`).
 
+## Token lifecycle automatico
+
+- `apiKey` usata solo per bootstrap iniziale sessione (`/v1/auth/token`).
+- `access token` usato per chiamate API.
+- Refresh automatico proattivo vicino alla scadenza e retry al primo `401`.
+- `refresh token` tentato su `/v1/auth/token/refresh` con fallback bootstrap se disponibile apiKey.
+
 ## API Catalog UI
 
 - Pagina `/api-catalog`: invoca endpoint Existing/Recommended (metodo/path/query/pathParams/body).
@@ -65,4 +72,3 @@
   - su pagina HTTPS con API HTTP: probable mixed-content block.
   - endpoint raggiungibile in `no-cors` ma fallisce in fetch normale: probabile CORS backend.
   - altrimenti: verifica rete/VPN/firewall e bind host/porta API.
-

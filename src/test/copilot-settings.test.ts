@@ -9,7 +9,13 @@ describe("copilot settings storage", () => {
   it("saves and normalizes url/token", () => {
     const saved = saveCopilotSettings({ apiBaseUrl: "localhost:8000/", apiToken: "  token-1 " });
 
-    expect(saved).toEqual({ apiBaseUrl: "http://localhost:8000", apiToken: "token-1", apiKey: undefined });
+    expect(saved).toEqual({
+      apiBaseUrl: "http://localhost:8000",
+      apiToken: "token-1",
+      apiKey: undefined,
+      bootstrapRole: "operator",
+      bootstrapSubject: "smart-ide",
+    });
 
     const stored = window.localStorage.getItem(COPILOT_SETTINGS_STORAGE_KEY);
     expect(stored).toContain("localhost:8000");

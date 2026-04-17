@@ -2,6 +2,8 @@ export interface CopilotSettings {
   apiBaseUrl?: string;
   apiToken?: string;
   apiKey?: string;
+  bootstrapRole?: string;
+  bootstrapSubject?: string;
 }
 
 export interface CopilotConnectionProbe {
@@ -52,6 +54,8 @@ const sanitizeSettings = (value: Partial<CopilotSettings>): CopilotSettings => (
   apiBaseUrl: normalizeUrl(value.apiBaseUrl),
   apiToken: normalizeToken(value.apiToken),
   apiKey: normalizeToken(value.apiKey),
+  bootstrapRole: normalizeToken(value.bootstrapRole) ?? "operator",
+  bootstrapSubject: normalizeToken(value.bootstrapSubject) ?? "smart-ide",
 });
 
 
@@ -79,14 +83,10 @@ const probe = async (baseUrl: string, endpoint: string, headers: HeadersInit): P
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), probeTimeoutMs);
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), probeTimeoutMs);
-
   try {
     const response = await fetch(`${baseUrl}${endpoint}`, {
       method: "GET",
       headers,
-      signal: controller.signal,
       signal: controller.signal,
     });
 
@@ -176,3 +176,4 @@ export const getCopilotApiBaseUrl = (): string | undefined => loadCopilotSetting
 export const getCopilotApiToken = (): string | undefined => loadCopilotSettings().apiToken;
 
 export const getCopilotApiKey = (): string | undefined => loadCopilotSettings().apiKey;
+

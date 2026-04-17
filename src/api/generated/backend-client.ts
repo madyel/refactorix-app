@@ -9,6 +9,7 @@ import type { ApiOperations, HttpMethod } from "./operations";
 import { apiOperations } from "./operations";
 import { getConfiguredApiBaseUrl } from "@/config/runtime-config";
 import { getCopilotApiKey, getCopilotApiToken } from "@/features/copilot/settings";
+import { getValidAccessToken, refreshAfterUnauthorized } from "@/features/copilot/auth-session";
 
 export type JsonObject = Record<string, unknown>;
 
@@ -85,20 +86,36 @@ async function performRequest<T extends OperationId>(
     config?.query as JsonObject | undefined,
   )}`;
 
-  const token = getCopilotApiToken();
+  const manualToken = getCopilotApiToken();
+  const sessionToken = await getValidAccessToken();
+  const token = sessionToken ?? manualToken;
   const apiKey = getCopilotApiKey();
 
-  const response = await fetch(url, {
+  const buildHeaders = (overrideToken?: string) => ({
+    "Content-Type": "application/json",
+    ...(overrideToken ? { Authorization: `Bearer ${overrideToken}` } : {}),
+    ...(apiKey ? { "x-api-key": apiKey } : {}),
+    ...config?.headers,
+  });
+
+  let response = await fetch(url, {
     method,
     signal: config?.signal,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(apiKey ? { "x-api-key": apiKey } : {}),
-      ...config?.headers,
-    },
+    headers: buildHeaders(token ?? undefined),
     body: config?.body === undefined ? undefined : JSON.stringify(config.body),
   });
+
+  if (response.status === 401) {
+    const refreshedToken = await refreshAfterUnauthorized();
+    if (refreshedToken) {
+      response = await fetch(url, {
+        method,
+        signal: config?.signal,
+        headers: buildHeaders(refreshedToken),
+        body: config?.body === undefined ? undefined : JSON.stringify(config.body),
+      });
+    }
+  }
 
   if (!response.ok) {
     throw new Error(`API request failed (${response.status}) for ${method} ${path}`);
