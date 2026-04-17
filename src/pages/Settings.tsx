@@ -38,9 +38,25 @@ const Settings = () => {
       apiKey: savedSettings.apiKey,
       apiToken: sessionToken ?? savedSettings.apiToken,
     });
+
+    let authMeLine = "⚠️ /v1/auth/me · saltato (nessun access token disponibile)";
+    if (savedSettings.apiBaseUrl && sessionToken) {
+      try {
+        const authMeResponse = await fetch(`${savedSettings.apiBaseUrl}/v1/auth/me`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${sessionToken}` },
+        });
+        authMeLine = `${authMeResponse.ok ? "✅" : "❌"} /v1/auth/me · ${authMeResponse.ok ? "OK" : `HTTP ${authMeResponse.status}`}${authMeResponse.status ? ` (${authMeResponse.status})` : ""}`;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Network error";
+        authMeLine = `❌ /v1/auth/me · ${message}`;
+      }
+    }
+
     const lines = [
       `Base URL: ${result.baseUrl ?? "(invalid)"}`,
       ...result.probes.map((probe) => `${probe.ok ? "✅" : "❌"} ${probe.endpoint} · ${probe.message}${probe.status ? ` (${probe.status})` : ""}`),
+      authMeLine,
     ];
 
     setConnectionResult(lines.join("\n"));
