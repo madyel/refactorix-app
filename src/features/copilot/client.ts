@@ -26,6 +26,10 @@ const mapError = (error: unknown): CopilotApiError => {
 
   const message = error instanceof Error ? error.message : "Unknown Copilot error";
 
+  if (message.includes("403")) {
+    return new CopilotApiError("Sessione non autorizzata", 403, "Riesegui login o aggiorna il token CSRF.");
+  }
+
   if (message.includes("429") || message.includes("503")) {
     return new CopilotApiError("Servizio temporaneamente non disponibile", undefined, "Riprova tra pochi secondi.");
   }

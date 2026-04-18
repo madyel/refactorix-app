@@ -34,6 +34,13 @@
 - Retry su `401` mantiene refresh sessione automatico, poi ripete una sola volta la request originale.
 - In `/settings` è disponibile un riepilogo di telemetria client-side (latenza media, error-rate, funnel analyze→patch→commit) utile per quality monitoring.
 
+
+## IDE Explorer now API-driven
+
+- `ProjectViewer` non usa più dataset cablati (`sampleFiles`).
+- I percorsi progetto vengono letti da `GET /v1/projects/discovery`.
+- L'albero file viene caricato da `GET /v1/projects/tree?project_path=...&depth=...` e normalizzato lato client per supportare shape response diverse del backend.
+
 ## API Catalog UI
 
 - Pagina `/api-catalog`: invoca endpoint Existing/Recommended (metodo/path/query/pathParams/body).
