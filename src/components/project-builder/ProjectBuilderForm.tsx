@@ -1,8 +1,17 @@
 import { Dispatch, SetStateAction } from "react";
 import { Search } from "lucide-react";
-import { stackOptions, templateOptions } from "@/hooks/use-project-builder-form";
+
+interface ProvisionResult {
+  summary: string;
+  repoPath: string;
+  projectCreated: boolean;
+  codeGenerated: boolean;
+  nextSteps: string[];
+}
 
 interface ProjectBuilderFormProps {
+  stackOptions: string[];
+  templateOptions: string[];
   values: {
     projectName: string;
     featureRequest: string;
@@ -12,6 +21,12 @@ interface ProjectBuilderFormProps {
     initGit: boolean;
     installDeps: boolean;
   };
+  onPickWorkspace: () => void | Promise<void>;
+  onCreateProject: () => void | Promise<void>;
+  onCreateAndGenerate: () => void | Promise<void>;
+  isSubmitting?: boolean;
+  provisionResult?: ProvisionResult | null;
+  provisionError?: string | null;
   actions: {
     setProjectName: (value: string) => void;
     setFeatureRequest: (value: string) => void;
@@ -36,7 +51,7 @@ const historyItems = [
   },
 ];
 
-export const ProjectBuilderForm = ({ values, actions }: ProjectBuilderFormProps) => {
+export const ProjectBuilderForm = ({ values, actions, stackOptions, templateOptions, onPickWorkspace, onCreateProject, onCreateAndGenerate, isSubmitting = false, provisionResult, provisionError }: ProjectBuilderFormProps) => {
   return (
     <section className="mx-auto w-full max-w-3xl space-y-4">
       <form className="rounded-3xl border border-white/10 bg-[#242424]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur">
@@ -63,8 +78,9 @@ export const ProjectBuilderForm = ({ values, actions }: ProjectBuilderFormProps)
             value={values.stack}
             onChange={(event) => actions.setStack(event.target.value)}
             className="h-10 rounded-lg border border-white/10 bg-[#161616] px-3 text-slate-100 outline-none focus:border-blue-400"
+            disabled={stackOptions.length === 0}
           >
-            {stackOptions.map((option) => (
+            {stackOptions.length === 0 ? (<option value="">Nessuno stack disponibile</option>) : stackOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
@@ -75,20 +91,30 @@ export const ProjectBuilderForm = ({ values, actions }: ProjectBuilderFormProps)
             value={values.template}
             onChange={(event) => actions.setTemplate(event.target.value)}
             className="h-10 rounded-lg border border-white/10 bg-[#161616] px-3 text-slate-100 outline-none focus:border-blue-400"
+            disabled={templateOptions.length === 0}
           >
-            {templateOptions.map((option) => (
+            {templateOptions.length === 0 ? (<option value="">Nessun template disponibile</option>) : templateOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
             ))}
           </select>
 
-          <input
-            value={values.basePath}
-            onChange={(event) => actions.setBasePath(event.target.value)}
-            placeholder="Base path"
-            className="h-10 min-w-[180px] flex-1 rounded-lg border border-white/10 bg-[#161616] px-3 text-slate-100 outline-none focus:border-blue-400"
-          />
+          <div className="flex min-w-[240px] flex-1 gap-2">
+            <input
+              value={values.basePath}
+              onChange={(event) => actions.setBasePath(event.target.value)}
+              placeholder="Base path"
+              className="h-10 min-w-[180px] flex-1 rounded-lg border border-white/10 bg-[#161616] px-3 text-slate-100 outline-none focus:border-blue-400"
+            />
+            <button
+              type="button"
+              onClick={() => void onPickWorkspace()}
+              className="h-10 rounded-lg border border-white/10 bg-white/[0.03] px-3 text-xs font-medium text-slate-100 transition hover:bg-white/[0.08]"
+            >
+              Scegli cartella
+            </button>
+          </div>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -115,19 +141,41 @@ export const ProjectBuilderForm = ({ values, actions }: ProjectBuilderFormProps)
           <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
-              className="h-10 rounded-lg border border-white/10 bg-white/[0.03] px-4 text-sm font-medium text-slate-100 transition hover:bg-white/[0.08]"
+              onClick={() => void onCreateProject()}
+              disabled={isSubmitting}
+              className="h-10 rounded-lg border border-white/10 bg-white/[0.03] px-4 text-sm font-medium text-slate-100 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Crea solo progetto
+              {isSubmitting ? "Creazione..." : "Crea solo progetto"}
             </button>
             <button
               type="button"
-              className="h-10 rounded-lg bg-slate-100 px-4 text-sm font-semibold text-slate-900 transition hover:bg-white"
+              onClick={() => void onCreateAndGenerate()}
+              disabled={isSubmitting}
+              className="h-10 rounded-lg bg-slate-100 px-4 text-sm font-semibold text-slate-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Crea framework software
+              {isSubmitting ? "Generazione..." : "Crea framework software"}
             </button>
           </div>
         </div>
       </form>
+
+      {provisionError && (
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          {provisionError}
+        </div>
+      )}
+
+      {provisionResult && (
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          <p className="font-semibold">{provisionResult.summary}</p>
+          <p className="mt-1 text-emerald-200">Repository: {provisionResult.repoPath}</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-emerald-200">
+            {provisionResult.nextSteps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#2b2b2b]/80 px-4 py-3 text-sm text-slate-200">
         <p className="font-medium">Configura Codex con Slack</p>
