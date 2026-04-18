@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { backendClient } from "@/api";
 import { getConfiguredApiBaseUrl } from "@/config/runtime-config";
-import { invokeCatalogEndpoint } from "@/features/copilot/catalog-client";
+import { copilotApiHub } from "@/features/copilot/api-hub";
 
 export interface BuilderSystemStatus {
   label: "Ollama" | "Qdrant" | "Temporal";
@@ -261,12 +260,12 @@ export const useBuilderRuntime = () => {
     setError(null);
 
     const [ollama, qdrant, temporal, actions, workflow, projectTemplates] = await Promise.allSettled([
-      backendClient.call("ollama_status_v1_system_ollama_status_get"),
-      backendClient.call("qdrant_status_v1_system_qdrant_status_get"),
-      backendClient.call("temporal_status_v1_system_temporal_status_get"),
-      backendClient.call("ide_actions_v1_ide_actions_get"),
-      backendClient.call("workflow_golden_path_v1_system_workflow_golden_path_get"),
-      invokeCatalogEndpoint({ method: "GET", path: "/v1/projects/templates" }),
+      copilotApiHub.system.ollamaStatus(),
+      copilotApiHub.system.qdrantStatus(),
+      copilotApiHub.system.temporalStatus(),
+      copilotApiHub.ide.actions(),
+      copilotApiHub.system.workflowGoldenPath(),
+      copilotApiHub.projects.templates(),
     ]);
 
     const parsedTemplates =
@@ -344,9 +343,7 @@ export const useBuilderRuntime = () => {
       if (!model) return;
       try {
         setError(null);
-        await backendClient.call("ollama_select_model_v1_system_ollama_select_model_post", {
-          body: { model },
-        });
+        await copilotApiHub.system.selectModel(model);
         await refresh();
       } catch (error) {
         const message = error instanceof Error ? error.message : "Errore cambio modello";

@@ -8,7 +8,7 @@ import { CopilotPanel } from "@/components/ide/CopilotPanel";
 import { Code2, Loader2, Save, Sparkles } from "lucide-react";
 import { useProjectViewerTabs } from "@/hooks/use-project-viewer-tabs";
 import { isLocalWorkspaceAvailable, listLocalWorkspaceTree, readLocalFile, writeLocalFile } from "@/features/workspace/local-fs";
-import { remoteWorkspaceClient } from "@/features/workspace/remote-workspace-client";
+import { remoteWorkspaceClient, type RemoteRegistryProject } from "@/features/workspace/remote-workspace-client";
 import { linkedWorkspaceManager } from "@/features/workspace/linked-workspaces";
 import { createCompareReview } from "@/features/workspace/sync";
 import type { CompareReview, LinkedProjectMetadata } from "@/features/workspace/model";
@@ -47,9 +47,13 @@ const ProjectViewer = () => {
 
   const [workspaceMode, setWorkspaceMode] = useState<"remote" | "local" | "linked">(initialMode);
   const [projectPath, setProjectPath] = useState(initialPath);
-  const [discoveredProjects, setDiscoveredProjects] = useState<string[]>([]);
+
+  const [remoteProjects, setRemoteProjects] = useState<RemoteRegistryProject[]>([]);
+  const [selectedRemoteProjectId, setSelectedRemoteProjectId] = useState("");
+
   const [linkedProjects, setLinkedProjects] = useState<LinkedProjectMetadata[]>([]);
   const [selectedLinkedId, setSelectedLinkedId] = useState<string>("");
+
   const [treeFiles, setTreeFiles] = useState<FileNode[]>([]);
   const [isLoadingTree, setIsLoadingTree] = useState(false);
   const [treeError, setTreeError] = useState<string | null>(null);
@@ -58,14 +62,29 @@ const ProjectViewer = () => {
   const [isComparing, setIsComparing] = useState(false);
 
   const [linkAlias, setLinkAlias] = useState("");
+  const [linkRemoteProjectId, setLinkRemoteProjectId] = useState("");
   const [linkRemotePath, setLinkRemotePath] = useState("");
   const [linkLocalPath, setLinkLocalPath] = useState("");
 
+  const [registerProjectId, setRegisterProjectId] = useState("");
+  const [registerRootPath, setRegisterRootPath] = useState("");
+  const [registerLabel, setRegisterLabel] = useState("");
+
   const localWorkspaceAvailable = isLocalWorkspaceAvailable();
+
+  const selectedRemoteProject = useMemo(
+    () => remoteProjects.find((entry) => entry.projectId === selectedRemoteProjectId),
+    [remoteProjects, selectedRemoteProjectId],
+  );
 
   const selectedLinkedProject = useMemo(
     () => linkedProjects.find((entry) => entry.id === selectedLinkedId),
     [linkedProjects, selectedLinkedId],
+  );
+
+  const activeTabData = useMemo(
+    () => openTabs.find((tab) => tab.path === activeTab),
+    [openTabs, activeTab],
   );
 
   useEffect(() => {
@@ -82,41 +101,28 @@ const ProjectViewer = () => {
       } else {
         next.delete("linked");
       }
+      if (selectedRemoteProjectId) {
+        next.set("remote_project", selectedRemoteProjectId);
+      } else {
+        next.delete("remote_project");
+      }
       return next;
     });
-  }, [workspaceMode, projectPath, selectedLinkedId, setSearchParams]);
+  }, [workspaceMode, projectPath, selectedLinkedId, selectedRemoteProjectId, setSearchParams]);
+
+  const refreshRemoteRegistry = async () => {
+    const registry = await remoteWorkspaceClient.listRegistryProjects();
+    setRemoteProjects(registry);
+    if (!selectedRemoteProjectId && registry.length > 0) {
+      setSelectedRemoteProjectId(registry[0].projectId);
+      setProjectPath(registry[0].rootPath);
+    }
+  };
 
   useEffect(() => {
     setLinkedProjects(linkedWorkspaceManager.list());
+    void refreshRemoteRegistry();
   }, []);
-
-  useEffect(() => {
-    if (workspaceMode !== "remote") return;
-
-    let mounted = true;
-
-    const loadProjects = async () => {
-      try {
-        const projects = await remoteWorkspaceClient.listProjects();
-        if (!mounted) return;
-
-        setDiscoveredProjects(projects);
-        if (!projectPath && projects.length > 0) {
-          setProjectPath(projects[0]);
-        }
-      } catch {
-        if (mounted) {
-          setTreeError("Impossibile caricare la discovery dei progetti dal backend remoto.");
-        }
-      }
-    };
-
-    void loadProjects();
-
-    return () => {
-      mounted = false;
-    };
-  }, [projectPath, workspaceMode]);
 
   useEffect(() => {
     if (workspaceMode !== "linked") return;
@@ -129,25 +135,19 @@ const ProjectViewer = () => {
     }
   }, [workspaceMode, selectedLinkedProject, linkedProjects]);
 
-  const loadTree = async (path: string) => {
-    if (!path) {
-      setTreeFiles([]);
-      return;
-    }
-
+  const loadTree = async () => {
     setIsLoadingTree(true);
     setTreeError(null);
 
     try {
       let files: FileNode[];
       if (workspaceMode === "local") {
-        files = await listLocalWorkspaceTree(path);
+        files = await listLocalWorkspaceTree(projectPath);
       } else if (workspaceMode === "remote") {
-        files = await remoteWorkspaceClient.getTree(path);
+        if (!selectedRemoteProject) throw new Error("Seleziona un remote workspace registrato.");
+        files = await remoteWorkspaceClient.getTree(selectedRemoteProject.projectId, ".", 5);
       } else {
-        if (!selectedLinkedProject) {
-          throw new Error("Nessun progetto linked selezionato.");
-        }
+        if (!selectedLinkedProject) throw new Error("Nessun progetto linked selezionato.");
         files = await listLocalWorkspaceTree(selectedLinkedProject.localPath);
       }
 
@@ -162,55 +162,49 @@ const ProjectViewer = () => {
   };
 
   useEffect(() => {
-    const targetPath = workspaceMode === "linked" ? selectedLinkedProject?.localPath ?? "" : projectPath;
-    void loadTree(targetPath);
-  }, [projectPath, workspaceMode, selectedLinkedProject?.localPath]);
+    void loadTree();
+  }, [workspaceMode, projectPath, selectedRemoteProjectId, selectedLinkedId]);
 
   const handleOpenFile = async (file: FileNode, path: string) => {
-    if (workspaceMode === "local" && file.type === "file") {
-      try {
-        const content = await readLocalFile(path);
-        handleFileSelect({ ...file, content }, path, { origin: "local" });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "read failed";
-        setTreeError(`Errore lettura file locale: ${message}`);
-      }
+    if (file.type !== "file") return;
+
+    if (workspaceMode === "local") {
+      const content = await readLocalFile(path);
+      handleFileSelect({ ...file, content }, path, { origin: "local" });
       return;
     }
 
-    if (workspaceMode === "linked" && file.type === "file") {
-      try {
-        const content = await readLocalFile(path);
-        handleFileSelect({ ...file, content }, path, {
-          origin: "linked",
-          linkedProjectId: selectedLinkedProject?.id,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "read failed";
-        setTreeError(`Errore lettura file linked: ${message}`);
-      }
+    if (workspaceMode === "linked") {
+      const content = await readLocalFile(path);
+      handleFileSelect({ ...file, content }, path, {
+        origin: "linked",
+        linkedProjectId: selectedLinkedProject?.id,
+      });
       return;
     }
 
-    handleFileSelect(file, path, { origin: "remote" });
+    if (!selectedRemoteProject) {
+      setTreeError("Seleziona un remote workspace registrato.");
+      return;
+    }
+
+    const relativePath = file.fullPath || path;
+    const content = await remoteWorkspaceClient.readFile(selectedRemoteProject.projectId, relativePath);
+    handleFileSelect({ ...file, content, fullPath: relativePath }, relativePath, { origin: "remote" });
   };
-
-  const activeTabData = useMemo(
-    () => openTabs.find((tab) => tab.path === activeTab),
-    [openTabs, activeTab],
-  );
 
   const handleSaveActiveFile = async () => {
     if (!activeTabData) return;
 
-    if (activeTabData.origin === "remote") {
-      setSaveMessage("File remoto in sola lettura in questa versione (sync manuale richiesto).");
-      return;
-    }
-
     try {
-      await writeLocalFile(activeTabData.path, activeTabData.content);
-      setSaveMessage(`Salvato: ${activeTabData.path}`);
+      if (activeTabData.origin === "remote") {
+        if (!selectedRemoteProject) throw new Error("Remote project non selezionato");
+        await remoteWorkspaceClient.writeFile(selectedRemoteProject.projectId, activeTabData.path, activeTabData.content);
+        setSaveMessage(`Salvato remoto: ${activeTabData.path}`);
+      } else {
+        await writeLocalFile(activeTabData.path, activeTabData.content);
+        setSaveMessage(`Salvato locale: ${activeTabData.path}`);
+      }
       setTimeout(() => setSaveMessage(""), 2500);
     } catch (error) {
       const message = error instanceof Error ? error.message : "write failed";
@@ -218,19 +212,35 @@ const ProjectViewer = () => {
     }
   };
 
+  const handleRegisterRemote = async () => {
+    if (!registerProjectId || !registerRootPath) {
+      setTreeError("Inserisci project_id e root_path per registrare un workspace remoto.");
+      return;
+    }
+
+    await remoteWorkspaceClient.registerProject({
+      projectId: registerProjectId,
+      rootPath: registerRootPath,
+      label: registerLabel || undefined,
+    });
+    await refreshRemoteRegistry();
+    setSelectedRemoteProjectId(registerProjectId);
+    setProjectPath(registerRootPath);
+  };
+
   const handleLinkWorkspace = () => {
-    if (!linkRemotePath || !linkLocalPath) {
-      setTreeError("Per creare un linked workspace devi specificare path remoto e locale.");
+    if (!linkRemoteProjectId || !linkRemotePath || !linkLocalPath) {
+      setTreeError("Per creare un linked workspace devi specificare project id remoto, path remoto e locale.");
       return;
     }
 
     const linked = linkedWorkspaceManager.upsert({
       alias: linkAlias,
+      remoteProjectId: linkRemoteProjectId,
       remotePath: linkRemotePath,
       localPath: linkLocalPath,
     });
-    const next = linkedWorkspaceManager.list();
-    setLinkedProjects(next);
+    setLinkedProjects(linkedWorkspaceManager.list());
     setSelectedLinkedId(linked.id);
     setWorkspaceMode("linked");
     setProjectPath(linked.localPath);
@@ -249,14 +259,7 @@ const ProjectViewer = () => {
     try {
       const relative = relativeFromRoot(selectedLinkedProject.localPath, activeTabData.path);
       const remoteFilePath = joinPath(selectedLinkedProject.remotePath, relative);
-      const remoteContent = await remoteWorkspaceClient.readFileFromTree(
-        selectedLinkedProject.remotePath,
-        remoteFilePath,
-      );
-
-      if (typeof remoteContent !== "string") {
-        throw new Error("Contenuto remoto non disponibile nel tree API per questo file.");
-      }
+      const remoteContent = await remoteWorkspaceClient.readFile(selectedLinkedProject.remoteProjectId, remoteFilePath);
 
       const review = createCompareReview({
         localPath: selectedLinkedProject.localPath,
@@ -274,42 +277,29 @@ const ProjectViewer = () => {
     }
   };
 
-  const handleImportRemoteIntoLocal = async () => {
-    if (!selectedLinkedProject || !activeTabData) {
-      setTreeError("Apri un file linked per import remoto → locale.");
-      return;
-    }
+  const handlePullSync = async () => {
+    if (!selectedLinkedProject) return;
+    const result = await remoteWorkspaceClient.syncPull(
+      selectedLinkedProject.remoteProjectId,
+      selectedLinkedProject.localPath,
+      selectedLinkedProject.remotePath,
+    );
+    linkedWorkspaceManager.markSynced(selectedLinkedProject.id);
+    setLinkedProjects(linkedWorkspaceManager.list());
+    setSaveMessage(`Sync pull completato (${String(result.changed_files ?? 0)} file).`);
+    void loadTree();
+  };
 
-    try {
-      const relative = relativeFromRoot(selectedLinkedProject.localPath, activeTabData.path);
-      const remoteFilePath = joinPath(selectedLinkedProject.remotePath, relative);
-      const remoteContent = await remoteWorkspaceClient.readFileFromTree(
-        selectedLinkedProject.remotePath,
-        remoteFilePath,
-      );
-
-      if (typeof remoteContent !== "string") {
-        throw new Error("Contenuto remoto non disponibile nel tree API per questo file.");
-      }
-
-      await writeLocalFile(activeTabData.path, remoteContent);
-      handleContentChange(activeTabData.path, remoteContent);
-      linkedWorkspaceManager.markSynced(selectedLinkedProject.id);
-      setLinkedProjects(linkedWorkspaceManager.list());
-      setCompareReview(
-        createCompareReview({
-          localPath: selectedLinkedProject.localPath,
-          remotePath: selectedLinkedProject.remotePath,
-          filePath: relative,
-          localContent: remoteContent,
-          remoteContent,
-        }),
-      );
-      setSaveMessage(`Import remoto → locale completato: ${activeTabData.path}`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "import failed";
-      setTreeError(`Errore import remoto → locale: ${message}`);
-    }
+  const handlePushSync = async () => {
+    if (!selectedLinkedProject) return;
+    const result = await remoteWorkspaceClient.syncPush(
+      selectedLinkedProject.remoteProjectId,
+      selectedLinkedProject.localPath,
+      selectedLinkedProject.remotePath,
+    );
+    linkedWorkspaceManager.markSynced(selectedLinkedProject.id);
+    setLinkedProjects(linkedWorkspaceManager.list());
+    setSaveMessage(`Sync push completato (${String(result.changed_files ?? 0)} file).`);
   };
 
   return (
@@ -328,87 +318,73 @@ const ProjectViewer = () => {
       <div className="grid grid-cols-1 gap-2 border-b border-border bg-ide-header/60 px-4 py-2 text-xs md:grid-cols-3">
         <div className="rounded border border-white/10 bg-[#111]/70 p-2">
           <p className="mb-2 text-[11px] uppercase tracking-wide text-slate-400">Workspace Context</p>
-          <div className="flex items-center gap-2">
-            <label className="text-muted-foreground">Mode</label>
-            <select
-              value={workspaceMode}
-              onChange={(event) => setWorkspaceMode(event.target.value as "remote" | "local" | "linked")}
-              className="rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
-            >
-              <option value="remote">Remote API</option>
-              <option value="local" disabled={!localWorkspaceAvailable}>Local desktop</option>
-              <option value="linked" disabled={!localWorkspaceAvailable || linkedProjects.length === 0}>Linked</option>
-            </select>
-          </div>
+          <select
+            value={workspaceMode}
+            onChange={(event) => setWorkspaceMode(event.target.value as "remote" | "local" | "linked")}
+            className="rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
+          >
+            <option value="remote">Remote API</option>
+            <option value="local" disabled={!localWorkspaceAvailable}>Local desktop</option>
+            <option value="linked" disabled={!localWorkspaceAvailable || linkedProjects.length === 0}>Linked</option>
+          </select>
 
           {workspaceMode === "remote" && (
             <>
-              <label className="mt-2 block text-muted-foreground">Remote project path</label>
-              <input
-                value={projectPath}
-                onChange={(event) => setProjectPath(event.target.value)}
-                className="mt-1 w-full rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
-                placeholder="/workspace/my-project"
-              />
-            </>
-          )}
-
-          {workspaceMode === "local" && (
-            <>
-              <label className="mt-2 block text-muted-foreground">Local workspace path</label>
-              <input
-                value={projectPath}
-                onChange={(event) => setProjectPath(event.target.value)}
-                className="mt-1 w-full rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
-                placeholder="/Users/.../workspace/project"
-              />
-            </>
-          )}
-
-          {workspaceMode === "linked" && (
-            <>
-              <label className="mt-2 block text-muted-foreground">Linked project</label>
+              <label className="mt-2 block text-muted-foreground">Remote registry project</label>
               <select
-                value={selectedLinkedId}
-                onChange={(event) => setSelectedLinkedId(event.target.value)}
+                value={selectedRemoteProjectId}
+                onChange={(event) => {
+                  setSelectedRemoteProjectId(event.target.value);
+                  const selected = remoteProjects.find((entry) => entry.projectId === event.target.value);
+                  setProjectPath(selected?.rootPath ?? "");
+                }}
                 className="mt-1 w-full rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
               >
-                {linkedProjects.map((entry) => (
-                  <option key={entry.id} value={entry.id}>{entry.alias} · {entry.remotePath}</option>
+                {remoteProjects.map((entry) => (
+                  <option key={entry.projectId} value={entry.projectId}>{entry.projectId} · {entry.rootPath}</option>
                 ))}
               </select>
+            </>
+          )}
+
+          {workspaceMode !== "remote" && (
+            <>
+              <label className="mt-2 block text-muted-foreground">Path</label>
+              <input
+                value={projectPath}
+                onChange={(event) => setProjectPath(event.target.value)}
+                className="mt-1 w-full rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
+                placeholder="/workspace/project"
+              />
             </>
           )}
         </div>
 
         <div className="rounded border border-white/10 bg-[#111]/70 p-2">
           <p className="mb-2 text-[11px] uppercase tracking-wide text-slate-400">Remote Workspace Client</p>
-          {workspaceMode === "remote" && discoveredProjects.length > 0 && (
-            <select
-              value={projectPath}
-              onChange={(event) => setProjectPath(event.target.value)}
-              className="w-full rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
-            >
-              {discoveredProjects.map((path) => (
-                <option key={path} value={path}>{path}</option>
-              ))}
-            </select>
-          )}
-          <button
-            onClick={() => void loadTree(workspaceMode === "linked" ? selectedLinkedProject?.localPath ?? "" : projectPath)}
-            className="mt-2 rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10"
-            disabled={isLoadingTree}
-          >
-            {isLoadingTree ? "Loading..." : "Refresh tree"}
+          <input
+            value={registerProjectId}
+            onChange={(event) => setRegisterProjectId(event.target.value)}
+            className="mb-1 w-full rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
+            placeholder="project_id"
+          />
+          <input
+            value={registerRootPath}
+            onChange={(event) => setRegisterRootPath(event.target.value)}
+            className="mb-1 w-full rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
+            placeholder="root_path (/workspace/my-project)"
+          />
+          <input
+            value={registerLabel}
+            onChange={(event) => setRegisterLabel(event.target.value)}
+            className="w-full rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
+            placeholder="label (optional)"
+          />
+          <button onClick={() => void handleRegisterRemote()} className="mt-2 rounded border border-white/15 px-2 py-1 hover:bg-white/10">
+            Register remote workspace
           </button>
-
-          <button
-            onClick={() => void handleSaveActiveFile()}
-            className="ml-2 inline-flex items-center gap-1 rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10"
-            disabled={!activeTabData}
-          >
-            <Save className="h-3 w-3" />
-            Save
+          <button onClick={() => void refreshRemoteRegistry()} className="ml-2 rounded border border-white/15 px-2 py-1 hover:bg-white/10">
+            Refresh registry
           </button>
         </div>
 
@@ -418,52 +394,59 @@ const ProjectViewer = () => {
             value={linkAlias}
             onChange={(event) => setLinkAlias(event.target.value)}
             className="mb-1 w-full rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
-            placeholder="Alias linked project (es. my-platform)"
+            placeholder="Alias linked project"
+          />
+          <input
+            value={linkRemoteProjectId}
+            onChange={(event) => setLinkRemoteProjectId(event.target.value)}
+            className="mb-1 w-full rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
+            placeholder="Remote project id"
           />
           <input
             value={linkRemotePath}
             onChange={(event) => setLinkRemotePath(event.target.value)}
             className="mb-1 w-full rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
-            placeholder="Remote path (/workspace/my-platform)"
+            placeholder="Remote path"
           />
           <input
             value={linkLocalPath}
             onChange={(event) => setLinkLocalPath(event.target.value)}
             className="w-full rounded border border-white/15 bg-[#111] px-2 py-1 text-xs text-slate-100"
-            placeholder="Local path (/Users/me/workspace/my-platform)"
+            placeholder="Local path"
           />
-          <button
-            onClick={handleLinkWorkspace}
-            className="mt-2 rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10"
-          >
+          <button onClick={handleLinkWorkspace} className="mt-2 rounded border border-white/15 px-2 py-1 hover:bg-white/10">
             Link remote ↔ local
           </button>
         </div>
 
-        {isLoadingTree && <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />}
-        {treeError && <span className="text-red-300">{treeError}</span>}
-        {saveMessage && <span className="text-slate-300">{saveMessage}</span>}
+        <div className="md:col-span-3 flex items-center gap-2">
+          <button onClick={() => void loadTree()} className="rounded border border-white/15 px-2 py-1 hover:bg-white/10" disabled={isLoadingTree}>
+            {isLoadingTree ? "Loading..." : "Refresh tree"}
+          </button>
+          <button onClick={() => void handleSaveActiveFile()} className="inline-flex items-center gap-1 rounded border border-white/15 px-2 py-1 hover:bg-white/10" disabled={!activeTabData}>
+            <Save className="h-3 w-3" /> Save
+          </button>
+          {isLoadingTree && <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />}
+          {treeError && <span className="text-red-300">{treeError}</span>}
+          {saveMessage && <span className="text-slate-300">{saveMessage}</span>}
+        </div>
       </div>
 
       {workspaceMode === "linked" && selectedLinkedProject && (
         <div className="border-b border-white/10 bg-[#0f1720] px-4 py-2 text-xs text-slate-200">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded border border-sky-400/40 px-2 py-0.5">linked</span>
-            <span>Remote: {selectedLinkedProject.remotePath}</span>
-            <span>Local: {selectedLinkedProject.localPath}</span>
-            <button
-              onClick={() => void handleCompareWithRemote()}
-              className="rounded border border-white/20 px-2 py-0.5 hover:bg-white/10"
-              disabled={!activeTabData || isComparing}
-            >
+            <span>Remote project: {selectedLinkedProject.remoteProjectId}</span>
+            <span>Remote path: {selectedLinkedProject.remotePath}</span>
+            <span>Local path: {selectedLinkedProject.localPath}</span>
+            <button onClick={() => void handleCompareWithRemote()} className="rounded border border-white/20 px-2 py-0.5 hover:bg-white/10" disabled={!activeTabData || isComparing}>
               Compare local vs remote
             </button>
-            <button
-              onClick={() => void handleImportRemoteIntoLocal()}
-              className="rounded border border-white/20 px-2 py-0.5 hover:bg-white/10"
-              disabled={!activeTabData || isComparing}
-            >
-              Import remote → local
+            <button onClick={() => void handlePullSync()} className="rounded border border-white/20 px-2 py-0.5 hover:bg-white/10" disabled={isComparing}>
+              Sync Pull (remote → local)
+            </button>
+            <button onClick={() => void handlePushSync()} className="rounded border border-white/20 px-2 py-0.5 hover:bg-white/10" disabled={isComparing}>
+              Sync Push (local → remote)
             </button>
           </div>
           {compareReview && (

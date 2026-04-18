@@ -13,6 +13,7 @@ const normalize = (value: unknown): LinkedProjectMetadata[] => {
       const record = item as Record<string, unknown>;
       const id = typeof record.id === "string" ? record.id : "";
       const alias = typeof record.alias === "string" ? record.alias : "";
+      const remoteProjectId = typeof record.remoteProjectId === "string" ? record.remoteProjectId : "";
       const remotePath = typeof record.remotePath === "string" ? record.remotePath : "";
       const localPath = typeof record.localPath === "string" ? record.localPath : "";
       const linkedAt = typeof record.linkedAt === "string" ? record.linkedAt : "";
@@ -23,6 +24,7 @@ const normalize = (value: unknown): LinkedProjectMetadata[] => {
       return {
         id,
         alias: alias || id,
+        remoteProjectId: remoteProjectId || slugFromPath(remotePath),
         remotePath,
         localPath,
         linkedAt,
@@ -60,7 +62,7 @@ export const linkedWorkspaceManager = {
     return readAll();
   },
 
-  upsert(input: { remotePath: string; localPath: string; alias?: string }): LinkedProjectMetadata {
+  upsert(input: { remoteProjectId: string; remotePath: string; localPath: string; alias?: string }): LinkedProjectMetadata {
     const current = readAll();
     const existing = current.find(
       (entry) => entry.remotePath === input.remotePath || entry.localPath === input.localPath,
@@ -72,6 +74,7 @@ export const linkedWorkspaceManager = {
       const updated: LinkedProjectMetadata = {
         ...existing,
         alias: input.alias?.trim() || existing.alias,
+        remoteProjectId: input.remoteProjectId,
         remotePath: input.remotePath,
         localPath: input.localPath,
       };
@@ -83,6 +86,7 @@ export const linkedWorkspaceManager = {
     const created: LinkedProjectMetadata = {
       id,
       alias: input.alias?.trim() || slugFromPath(input.remotePath),
+      remoteProjectId: input.remoteProjectId,
       remotePath: input.remotePath,
       localPath: input.localPath,
       linkedAt: now,

@@ -10,6 +10,7 @@ export interface WorkspaceDescriptor {
 export interface LinkedProjectMetadata {
   id: string;
   alias: string;
+  remoteProjectId: string;
   remotePath: string;
   localPath: string;
   linkedAt: string;
