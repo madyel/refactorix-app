@@ -7,6 +7,9 @@ import {
 } from "@tanstack/react-query";
 import type { ApiOperations, HttpMethod } from "./operations";
 import { apiOperations } from "./operations";
+import { getConfiguredApiBaseUrl } from "@/config/runtime-config";
+import { getCopilotApiKey, getCopilotApiToken } from "@/features/copilot/settings";
+import { getValidAccessToken, refreshAfterUnauthorized } from "@/features/copilot/auth-session";
 
 export type JsonObject = Record<string, unknown>;
 
@@ -20,9 +23,54 @@ export interface RequestConfig<
   body?: TBody extends never ? never : TBody;
   signal?: AbortSignal;
   headers?: HeadersInit;
+  timeoutMs?: number;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+export class ApiHttpError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly method: HttpMethod,
+    public readonly path: string,
+    public readonly url: string,
+    public readonly correlationId?: string,
+    public readonly remediation?: string,
+    public readonly details?: unknown,
+  ) {
+    super(message);
+  }
+}
+
+const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
+
+const remediationByStatus = (status: number): string | undefined => {
+  if (status === 401) return "Sessione scaduta: esegui refresh sessione o login.";
+  if (status === 403) return "Accesso negato: verifica ruolo RBAC o token CSRF.";
+  if (status === 404) return "Endpoint non trovato: verifica API base URL e versione backend.";
+  if (status === 409) return "Conflitto stato risorsa: ricarica i dati e riprova.";
+  if (status === 422) return "Payload non valido: controlla campi obbligatori e formato.";
+  if (status === 429 || status >= 500) return "Servizio temporaneamente degradato: riprova con backoff.";
+  return undefined;
+};
+
+const parseErrorBody = async (response: Response): Promise<unknown> => {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    try {
+      return await response.json();
+    } catch {
+      return undefined;
+    }
+  }
+
+  try {
+    const text = await response.text();
+    return text || undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 export const buildPath = (template: string, pathParams?: JsonObject): string => {
   if (!pathParams) return template;
@@ -79,23 +127,92 @@ async function performRequest<T extends OperationId>(
   const method: HttpMethod = operation.method;
   const path = operation.path;
 
-  const url = `${API_BASE_URL}${appendQuery(
+  const url = `${getConfiguredApiBaseUrl()}${appendQuery(
     buildPath(path, config?.pathParams as JsonObject | undefined),
     config?.query as JsonObject | undefined,
   )}`;
 
-  const response = await fetch(url, {
-    method,
-    signal: config?.signal,
-    headers: {
-      "Content-Type": "application/json",
-      ...config?.headers,
-    },
-    body: config?.body === undefined ? undefined : JSON.stringify(config.body),
+  const manualToken = getCopilotApiToken();
+  const sessionToken = await getValidAccessToken();
+  const token = sessionToken ?? manualToken;
+  const apiKey = getCopilotApiKey();
+  const correlationId =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `cid-${Date.now()}`;
+
+  const buildHeaders = (overrideToken?: string) => ({
+    "Content-Type": "application/json",
+    "x-correlation-id": correlationId,
+    ...(overrideToken ? { Authorization: `Bearer ${overrideToken}` } : {}),
+    ...(apiKey ? { "x-api-key": apiKey } : {}),
+    ...config?.headers,
   });
 
+  const doFetch = async (overrideToken?: string) => {
+    const timeoutMs = config?.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    const timeoutController = new AbortController();
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      timeoutController.abort();
+    }, timeoutMs);
+
+    if (config?.signal) {
+      if (config.signal.aborted) {
+        timeoutController.abort();
+      } else {
+        config.signal.addEventListener("abort", () => timeoutController.abort(), { once: true });
+      }
+    }
+
+    try {
+      return await fetch(url, {
+        method,
+        credentials: "include",
+        signal: timeoutController.signal,
+        headers: buildHeaders(overrideToken),
+        body: config?.body === undefined ? undefined : JSON.stringify(config.body),
+      });
+    } catch (error) {
+      if (timedOut) {
+        throw new ApiHttpError(
+          `API request timeout (${timeoutMs}ms) for ${method} ${path}`,
+          408,
+          method,
+          path,
+          url,
+          correlationId,
+          "Riduci payload o verifica latenza rete/backend.",
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+
+  let response = await doFetch(token ?? undefined);
+
+  if (response.status === 401) {
+    const refreshedToken = await refreshAfterUnauthorized();
+    if (refreshedToken) {
+      response = await doFetch(refreshedToken);
+    }
+  }
+
   if (!response.ok) {
-    throw new Error(`API request failed (${response.status}) for ${method} ${path}`);
+    const details = await parseErrorBody(response);
+    throw new ApiHttpError(
+      `API request failed (${response.status}) for ${method} ${path}`,
+      response.status,
+      method,
+      path,
+      url,
+      response.headers.get("x-correlation-id") ?? correlationId,
+      remediationByStatus(response.status),
+      details,
+    );
   }
 
   if (response.status === 204) {
