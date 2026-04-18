@@ -24,6 +24,7 @@ interface ProjectBuilderFormProps {
   onPickWorkspace: () => void | Promise<void>;
   onCreateProject: () => void | Promise<void>;
   onCreateAndGenerate: () => void | Promise<void>;
+  onOpenViewer: (repoPath: string) => void;
   isSubmitting?: boolean;
   provisionResult?: ProvisionResult | null;
   provisionError?: string | null;
@@ -51,7 +52,19 @@ const historyItems = [
   },
 ];
 
-export const ProjectBuilderForm = ({ values, actions, stackOptions, templateOptions, onPickWorkspace, onCreateProject, onCreateAndGenerate, isSubmitting = false, provisionResult, provisionError }: ProjectBuilderFormProps) => {
+export const ProjectBuilderForm = ({
+  values,
+  actions,
+  stackOptions,
+  templateOptions,
+  onPickWorkspace,
+  onCreateProject,
+  onCreateAndGenerate,
+  onOpenViewer,
+  isSubmitting = false,
+  provisionResult,
+  provisionError,
+}: ProjectBuilderFormProps) => {
   return (
     <section className="mx-auto w-full max-w-3xl space-y-4">
       <form className="rounded-3xl border border-white/10 bg-[#242424]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur">
@@ -169,6 +182,13 @@ export const ProjectBuilderForm = ({ values, actions, stackOptions, templateOpti
         <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
           <p className="font-semibold">{provisionResult.summary}</p>
           <p className="mt-1 text-emerald-200">Repository: {provisionResult.repoPath}</p>
+          <button
+            type="button"
+            onClick={() => onOpenViewer(provisionResult.repoPath)}
+            className="mt-3 rounded-lg border border-emerald-300/30 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-300/20"
+          >
+            Apri in Project Viewer
+          </button>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-emerald-200">
             {provisionResult.nextSteps.map((step) => (
               <li key={step}>{step}</li>
