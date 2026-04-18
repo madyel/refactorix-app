@@ -46,6 +46,15 @@
 - `Cambio modello` invoca `POST /v1/system/ollama/select-model` e ricarica lo stato provider.
 - Workspace custom: da Home Builder puoi usare `Scegli cartella`; in Electron apre il picker nativo, in web fallback su inserimento path manuale.
 
+
+## Project provisioning flow (API ufficiali)
+
+- `Crea solo progetto` usa `POST /v1/projects/create` (stack/template/path/init_git/install_deps).
+- `Crea framework software` esegue:
+  1. `POST /v1/projects/create`
+  2. `POST /v1/projects/generate` con `repo_path` + `request`
+- La UI mostra output professionale (`summary`, `repoPath`, `nextSteps`) invece di payload grezzi.
+
 ## IDE Explorer now API-driven
 
 - `ProjectViewer` non usa più dataset cablati (`sampleFiles`).

@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { BuilderHeader } from "@/components/project-builder/BuilderHeader";
 import { BuilderStatusPanel } from "@/components/project-builder/BuilderStatusPanel";
 import { ProjectBuilderForm } from "@/components/project-builder/ProjectBuilderForm";
+import { createAndGenerateProject, createProjectOnly, type ProjectProvisionResult } from "@/features/project-provisioning/client";
 import { useBuilderRuntime } from "@/hooks/use-builder-runtime";
 import { useProjectBuilderForm } from "@/hooks/use-project-builder-form";
 import { pickWorkspaceDirectory } from "@/features/workspace/picker";
@@ -14,6 +15,10 @@ const Index = () => {
     modelOptions: runtime.modelOptions,
   });
 
+  const [isSubmittingProvision, setIsSubmittingProvision] = useState(false);
+  const [provisionResult, setProvisionResult] = useState<ProjectProvisionResult | null>(null);
+  const [provisionError, setProvisionError] = useState<string | null>(null);
+
   const scopedTemplateOptions = runtime.getTemplateOptionsForStack(values.stack);
 
   useEffect(() => {
@@ -23,11 +28,57 @@ const Index = () => {
     }
   }, [actions.setTemplate, scopedTemplateOptions, values.template]);
 
-
   const handlePickWorkspace = async () => {
     const selected = await pickWorkspaceDirectory(values.basePath);
     if (selected) {
       actions.setBasePath(selected);
+    }
+  };
+
+  const handleCreateProject = async () => {
+    setIsSubmittingProvision(true);
+    setProvisionError(null);
+    setProvisionResult(null);
+
+    try {
+      const result = await createProjectOnly({
+        name: values.projectName,
+        stack: values.stack,
+        template: values.template,
+        path: values.basePath,
+        initGit: values.initGit,
+        installDeps: values.installDeps,
+      });
+      setProvisionResult(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Errore creazione progetto";
+      setProvisionError(`Creazione progetto fallita: ${message}`);
+    } finally {
+      setIsSubmittingProvision(false);
+    }
+  };
+
+  const handleCreateAndGenerate = async () => {
+    setIsSubmittingProvision(true);
+    setProvisionError(null);
+    setProvisionResult(null);
+
+    try {
+      const result = await createAndGenerateProject({
+        name: values.projectName,
+        stack: values.stack,
+        template: values.template,
+        path: values.basePath,
+        initGit: values.initGit,
+        installDeps: values.installDeps,
+        request: values.featureRequest,
+      });
+      setProvisionResult(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Errore generazione progetto";
+      setProvisionError(`Generazione progetto fallita: ${message}`);
+    } finally {
+      setIsSubmittingProvision(false);
     }
   };
 
@@ -57,6 +108,11 @@ const Index = () => {
           stackOptions={runtime.stackOptions}
           templateOptions={scopedTemplateOptions}
           onPickWorkspace={handlePickWorkspace}
+          onCreateProject={handleCreateProject}
+          onCreateAndGenerate={handleCreateAndGenerate}
+          isSubmitting={isSubmittingProvision}
+          provisionResult={provisionResult}
+          provisionError={provisionError}
         />
       </section>
     </main>
