@@ -96,6 +96,7 @@
 
 ## Troubleshooting rapido connessione
 
+- Se `System status` mostra output tipo `<!doctype html>...` significa che le chiamate stanno colpendo il frontend e non il backend API: correggi `Copilot API Base URL` in `/settings` (es. `http://<host>:8000`).
 - Se vedi `NetworkError when attempting to fetch resource` nel test connessione:
   - su pagina HTTPS con API HTTP: probable mixed-content block.
   - endpoint raggiungibile in `no-cors` ma fallisce in fetch normale: probabile CORS backend.

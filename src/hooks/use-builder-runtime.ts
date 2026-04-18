@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { backendClient } from "@/api";
+import { getConfiguredApiBaseUrl } from "@/config/runtime-config";
 
 export interface BuilderSystemStatus {
   label: "Ollama" | "Qdrant" | "Temporal";
@@ -19,6 +20,32 @@ interface BuilderRuntimeState {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const looksLikeHtml = (value: unknown): boolean => {
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized.startsWith("<!doctype html") || normalized.startsWith("<html");
+};
+
+const compact = (value: string, max = 100) => (value.length > max ? `${value.slice(0, max - 3)}...` : value);
+
+export const humanizeServiceDetail = (payload: unknown): string => {
+  if (looksLikeHtml(payload)) {
+    return `Endpoint ha risposto HTML invece di JSON (probabile API Base URL errata: ${getConfiguredApiBaseUrl()}).`;
+  }
+
+  if (typeof payload === "string") {
+    return compact(payload.replace(/\s+/g, " "));
+  }
+
+  if (isRecord(payload)) {
+    const message = payload.message ?? payload.detail ?? payload.error ?? payload.status;
+    if (typeof message === "string") return compact(message);
+    return compact(JSON.stringify(payload));
+  }
+
+  return "n/a";
+};
 
 const collectStringArrays = (value: unknown, targetKeys: string[]): string[] => {
   const output = new Set<string>();
@@ -84,32 +111,39 @@ const collectModelOptions = (value: unknown): string[] => {
   return [...options];
 };
 
+const isOnlinePayload = (payload: unknown): boolean => {
+  if (looksLikeHtml(payload)) return false;
+  if (!isRecord(payload)) return false;
+
+  return (
+    payload.ok === true ||
+    payload.status === "ok" ||
+    payload.status === "online" ||
+    payload.healthy === true
+  );
+};
+
 const statusFromResult = (
   label: BuilderSystemStatus["label"],
-  result: PromiseSettledResult<Record<string, unknown>>,
+  result: PromiseSettledResult<unknown>,
 ): BuilderSystemStatus => {
   if (result.status === "rejected") {
+    const reason = result.reason instanceof Error ? result.reason.message : "request failed";
     return {
       label,
       value: "Offline",
-      detail: result.reason instanceof Error ? result.reason.message : "request failed",
+      detail: `Request fallita: ${compact(reason)}`,
       tone: "rose",
     };
   }
 
   const payload = result.value;
-  const online =
-    payload.ok === true ||
-    payload.status === "ok" ||
-    payload.status === "online" ||
-    payload.healthy === true;
-
-  const detail = JSON.stringify(payload).slice(0, 120) || "n/a";
+  const online = isOnlinePayload(payload);
 
   return {
     label,
     value: online ? "Online" : "Offline",
-    detail,
+    detail: humanizeServiceDetail(payload),
     tone: online ? "emerald" : "rose",
   };
 };
@@ -121,9 +155,9 @@ const initialState: BuilderRuntimeState = {
   providerInfo: "Provider info non disponibile",
   capabilityInfo: "Nessuna capability caricata",
   systemStatus: [
-    { label: "Ollama", value: "Offline", detail: "not loaded", tone: "rose" },
-    { label: "Qdrant", value: "Offline", detail: "not loaded", tone: "rose" },
-    { label: "Temporal", value: "Offline", detail: "not loaded", tone: "rose" },
+    { label: "Ollama", value: "Offline", detail: "in attesa di refresh", tone: "rose" },
+    { label: "Qdrant", value: "Offline", detail: "in attesa di refresh", tone: "rose" },
+    { label: "Temporal", value: "Offline", detail: "in attesa di refresh", tone: "rose" },
   ],
 };
 
@@ -159,13 +193,19 @@ export const useBuilderRuntime = () => {
     const uniqueStack = [...new Set(stackOptions)];
     const uniqueTemplate = [...new Set(templateOptions)];
 
+    const systemStatus = [
+      statusFromResult("Ollama", ollama),
+      statusFromResult("Qdrant", qdrant),
+      statusFromResult("Temporal", temporal),
+    ];
+
     setState({
       stackOptions: uniqueStack,
       templateOptions: uniqueTemplate,
       modelOptions,
       providerInfo:
         ollama.status === "fulfilled"
-          ? `Ollama status source: ${Object.keys(ollama.value).slice(0, 6).join(", ") || "empty"}`
+          ? humanizeServiceDetail(ollama.value)
           : "Provider unavailable",
       capabilityInfo:
         actions.status === "fulfilled"
@@ -175,15 +215,13 @@ export const useBuilderRuntime = () => {
               return `${Array.isArray(actionsList) ? actionsList.length : 0} capabilities da /v1/ide/actions`;
             })()
           : "Capabilities unavailable",
-      systemStatus: [
-        statusFromResult("Ollama", ollama as PromiseSettledResult<Record<string, unknown>>),
-        statusFromResult("Qdrant", qdrant as PromiseSettledResult<Record<string, unknown>>),
-        statusFromResult("Temporal", temporal as PromiseSettledResult<Record<string, unknown>>),
-      ],
+      systemStatus,
     });
 
-    if (ollama.status === "rejected" && qdrant.status === "rejected" && temporal.status === "rejected") {
-      setError("Impossibile leggere lo stato sistema dal backend Copilot.");
+    if (systemStatus.every((item) => item.value === "Offline")) {
+      setError(
+        "Tutti i servizi risultano offline o non raggiungibili. Verifica API Base URL in /settings e che punti al backend Copilot (non al frontend).",
+      );
     }
 
     setIsLoading(false);
@@ -193,19 +231,22 @@ export const useBuilderRuntime = () => {
     void refresh();
   }, [refresh]);
 
-  const applyModel = useCallback(async (model: string) => {
-    if (!model) return;
-    try {
-      setError(null);
-      await backendClient.call("ollama_select_model_v1_system_ollama_select_model_post", {
-        body: { model },
-      });
-      await refresh();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Errore cambio modello";
-      setError(`Cambio modello fallito: ${message}`);
-    }
-  }, [refresh]);
+  const applyModel = useCallback(
+    async (model: string) => {
+      if (!model) return;
+      try {
+        setError(null);
+        await backendClient.call("ollama_select_model_v1_system_ollama_select_model_post", {
+          body: { model },
+        });
+        await refresh();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Errore cambio modello";
+        setError(`Cambio modello fallito: ${message}`);
+      }
+    },
+    [refresh],
+  );
 
   return useMemo(
     () => ({
