@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { BuilderHeader } from "@/components/project-builder/BuilderHeader";
 import { BuilderStatusPanel } from "@/components/project-builder/BuilderStatusPanel";
 import { ProjectBuilderForm } from "@/components/project-builder/ProjectBuilderForm";
-import { createAndGenerateProject, createProjectOnly, type ProjectProvisionResult } from "@/features/project-provisioning/client";
+import {
+  createAndGenerateProject,
+  createProjectOnly,
+  toProjectProvisionErrorMessage,
+  type ProjectProvisionResult,
+} from "@/features/project-provisioning/client";
 import { useBuilderRuntime } from "@/hooks/use-builder-runtime";
 import { useProjectBuilderForm } from "@/hooks/use-project-builder-form";
 import { pickWorkspaceDirectory } from "@/features/workspace/picker";
@@ -51,7 +56,7 @@ const Index = () => {
       });
       setProvisionResult(result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Errore creazione progetto";
+      const message = toProjectProvisionErrorMessage(error, "Errore creazione progetto");
       setProvisionError(`Creazione progetto fallita: ${message}`);
     } finally {
       setIsSubmittingProvision(false);
@@ -75,7 +80,7 @@ const Index = () => {
       });
       setProvisionResult(result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Errore generazione progetto";
+      const message = toProjectProvisionErrorMessage(error, "Errore generazione progetto");
       setProvisionError(`Generazione progetto fallita: ${message}`);
     } finally {
       setIsSubmittingProvision(false);
