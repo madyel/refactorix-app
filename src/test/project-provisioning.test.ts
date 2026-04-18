@@ -1,6 +1,11 @@
+import { ApiHttpError } from "@/api/generated/backend-client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { backendClient } from "@/api";
-import { createAndGenerateProject, createProjectOnly } from "@/features/project-provisioning/client";
+import {
+  createAndGenerateProject,
+  createProjectOnly,
+  toProjectProvisionErrorMessage,
+} from "@/features/project-provisioning/client";
 
 describe("project provisioning client", () => {
   afterEach(() => {
@@ -49,5 +54,23 @@ describe("project provisioning client", () => {
         request: "create api and auth",
       },
     });
+  });
+
+  it("formats API validation errors for project creation", () => {
+    const error = new ApiHttpError(
+      "API request failed (400) for POST /v1/projects/create",
+      400,
+      "POST",
+      "/v1/projects/create",
+      "http://localhost:8000/v1/projects/create",
+      "cid-123",
+      undefined,
+      {
+        detail: [{ loc: ["body", "name"], msg: "String should have at least 2 characters" }],
+      },
+    );
+
+    const message = toProjectProvisionErrorMessage(error, "Errore creazione progetto");
+    expect(message).toBe("body.name: String should have at least 2 characters");
   });
 });
