@@ -1,8 +1,9 @@
 import { Dispatch, SetStateAction } from "react";
 import { Search } from "lucide-react";
-import { stackOptions, templateOptions } from "@/hooks/use-project-builder-form";
 
 interface ProjectBuilderFormProps {
+  stackOptions: string[];
+  templateOptions: string[];
   values: {
     projectName: string;
     featureRequest: string;
@@ -36,7 +37,7 @@ const historyItems = [
   },
 ];
 
-export const ProjectBuilderForm = ({ values, actions }: ProjectBuilderFormProps) => {
+export const ProjectBuilderForm = ({ values, actions, stackOptions, templateOptions }: ProjectBuilderFormProps) => {
   return (
     <section className="mx-auto w-full max-w-3xl space-y-4">
       <form className="rounded-3xl border border-white/10 bg-[#242424]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur">
@@ -63,8 +64,9 @@ export const ProjectBuilderForm = ({ values, actions }: ProjectBuilderFormProps)
             value={values.stack}
             onChange={(event) => actions.setStack(event.target.value)}
             className="h-10 rounded-lg border border-white/10 bg-[#161616] px-3 text-slate-100 outline-none focus:border-blue-400"
+            disabled={stackOptions.length === 0}
           >
-            {stackOptions.map((option) => (
+            {stackOptions.length === 0 ? (<option value="">Nessuno stack disponibile</option>) : stackOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
@@ -75,8 +77,9 @@ export const ProjectBuilderForm = ({ values, actions }: ProjectBuilderFormProps)
             value={values.template}
             onChange={(event) => actions.setTemplate(event.target.value)}
             className="h-10 rounded-lg border border-white/10 bg-[#161616] px-3 text-slate-100 outline-none focus:border-blue-400"
+            disabled={templateOptions.length === 0}
           >
-            {templateOptions.map((option) => (
+            {templateOptions.length === 0 ? (<option value="">Nessun template disponibile</option>) : templateOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>

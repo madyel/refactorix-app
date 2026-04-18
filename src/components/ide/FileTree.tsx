@@ -108,16 +108,20 @@ export const FileTree = ({ files, onFileSelect, selectedPath }: FileTreeProps) =
         </span>
       </div>
       <div className="flex-1 overflow-auto py-1">
-        {files.map((node) => (
-          <FileTreeItem
-            key={node.name}
-            node={node}
-            depth={0}
-            path=""
-            onFileSelect={onFileSelect}
-            selectedPath={selectedPath}
-          />
-        ))}
+        {files.length === 0 ? (
+          <div className="px-3 py-4 text-xs text-muted-foreground">Nessun file disponibile. Verifica project path o permessi API.</div>
+        ) : (
+          files.map((node) => (
+            <FileTreeItem
+              key={node.name}
+              node={node}
+              depth={0}
+              path=""
+              onFileSelect={onFileSelect}
+              selectedPath={selectedPath}
+            />
+          ))
+        )}
       </div>
     </div>
   );

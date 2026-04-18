@@ -1,24 +1,42 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-export const modelOptions = [
-  "gpt-4.1-mini",
-  "gpt-4.1",
-  "claude-sonnet-4",
-  "llama-3.3-70b",
-];
+interface UseProjectBuilderFormOptions {
+  stackOptions: string[];
+  templateOptions: string[];
+  modelOptions: string[];
+}
 
-export const stackOptions = ["python", "typescript", "go", "java"];
-export const templateOptions = ["fastapi", "express", "nextjs", "spring-boot"];
-
-export const useProjectBuilderForm = () => {
+export const useProjectBuilderForm = ({
+  stackOptions,
+  templateOptions,
+  modelOptions,
+}: UseProjectBuilderFormOptions) => {
   const [projectName, setProjectName] = useState("my-platform");
   const [featureRequest, setFeatureRequest] = useState("es: mi crei una pagina login con il database");
   const [basePath, setBasePath] = useState("/workspace");
   const [model, setModel] = useState("");
-  const [stack, setStack] = useState("python");
-  const [template, setTemplate] = useState("fastapi");
+  const [stack, setStack] = useState("");
+  const [template, setTemplate] = useState("");
   const [initGit, setInitGit] = useState(true);
   const [installDeps, setInstallDeps] = useState(false);
+
+  useEffect(() => {
+    if (!stack && stackOptions.length > 0) {
+      setStack(stackOptions[0]);
+    }
+  }, [stack, stackOptions]);
+
+  useEffect(() => {
+    if (!template && templateOptions.length > 0) {
+      setTemplate(templateOptions[0]);
+    }
+  }, [template, templateOptions]);
+
+  useEffect(() => {
+    if (!model && modelOptions.length > 0) {
+      setModel(modelOptions[0]);
+    }
+  }, [model, modelOptions]);
 
   return {
     values: {
