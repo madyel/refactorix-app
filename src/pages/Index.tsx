@@ -1,13 +1,20 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { BuilderHeader } from "@/components/project-builder/BuilderHeader";
 import { BuilderStatusPanel } from "@/components/project-builder/BuilderStatusPanel";
 import { ProjectBuilderForm } from "@/components/project-builder/ProjectBuilderForm";
-import { createAndGenerateProject, createProjectOnly, type ProjectProvisionResult } from "@/features/project-provisioning/client";
+import {
+  createAndGenerateProject,
+  createProjectOnly,
+  toProjectProvisionErrorMessage,
+  type ProjectProvisionResult,
+} from "@/features/project-provisioning/client";
 import { useBuilderRuntime } from "@/hooks/use-builder-runtime";
 import { useProjectBuilderForm } from "@/hooks/use-project-builder-form";
 import { pickWorkspaceDirectory } from "@/features/workspace/picker";
 
 const Index = () => {
+  const navigate = useNavigate();
   const runtime = useBuilderRuntime();
   const { values, actions } = useProjectBuilderForm({
     stackOptions: runtime.stackOptions,
@@ -51,7 +58,7 @@ const Index = () => {
       });
       setProvisionResult(result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Errore creazione progetto";
+      const message = toProjectProvisionErrorMessage(error, "Errore creazione progetto");
       setProvisionError(`Creazione progetto fallita: ${message}`);
     } finally {
       setIsSubmittingProvision(false);
@@ -75,7 +82,7 @@ const Index = () => {
       });
       setProvisionResult(result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Errore generazione progetto";
+      const message = toProjectProvisionErrorMessage(error, "Errore generazione progetto");
       setProvisionError(`Generazione progetto fallita: ${message}`);
     } finally {
       setIsSubmittingProvision(false);
@@ -84,6 +91,14 @@ const Index = () => {
 
   const handleApplyModel = async () => {
     await runtime.applyModel(values.model);
+  };
+
+  const handleOpenProjectViewer = (repoPath: string) => {
+    const params = new URLSearchParams({
+      mode: "remote",
+      path: repoPath,
+    });
+    navigate(`/project-viewer?${params.toString()}`);
   };
 
   return (
@@ -110,6 +125,7 @@ const Index = () => {
           onPickWorkspace={handlePickWorkspace}
           onCreateProject={handleCreateProject}
           onCreateAndGenerate={handleCreateAndGenerate}
+          onOpenViewer={handleOpenProjectViewer}
           isSubmitting={isSubmittingProvision}
           provisionResult={provisionResult}
           provisionError={provisionError}

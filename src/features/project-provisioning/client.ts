@@ -1,4 +1,5 @@
 import { backendClient } from "@/api";
+import { ApiHttpError } from "@/api/generated/backend-client";
 
 export interface ProjectProvisionInput {
   name: string;
@@ -17,6 +18,55 @@ export interface ProjectProvisionResult {
   summary: string;
   nextSteps: string[];
 }
+
+const stringifyValidationLocation = (location: unknown): string => {
+  if (!Array.isArray(location)) return "";
+  const parts = location.filter((part): part is string => typeof part === "string" && part.length > 0);
+  if (parts.length === 0) return "";
+  return parts.join(".");
+};
+
+const parseValidationDetails = (details: unknown): string | undefined => {
+  if (!Array.isArray(details)) return undefined;
+
+  const messages = details
+    .map((item) => {
+      if (!isRecord(item)) return undefined;
+      const message = typeof item.msg === "string" ? item.msg : undefined;
+      if (!message) return undefined;
+      const location = stringifyValidationLocation(item.loc);
+      return location ? `${location}: ${message}` : message;
+    })
+    .filter((message): message is string => Boolean(message));
+
+  if (messages.length === 0) return undefined;
+  return messages.join(" | ");
+};
+
+const parseApiErrorDetails = (details: unknown): string | undefined => {
+  if (!isRecord(details)) return undefined;
+
+  const directMessage = pickFirstString(details, ["message", "error", "detail"]);
+  if (directMessage) return directMessage;
+
+  const parsedValidation = parseValidationDetails(details.detail);
+  if (parsedValidation) return parsedValidation;
+
+  return undefined;
+};
+
+export const toProjectProvisionErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof ApiHttpError) {
+    const detailedMessage = parseApiErrorDetails(error.details);
+    if (detailedMessage) return detailedMessage;
+    if (error.remediation) return `${error.message}. ${error.remediation}`;
+    return error.message;
+  }
+
+  if (error instanceof Error) return error.message;
+
+  return fallback;
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);

@@ -1,11 +1,14 @@
 import { X } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
+import type { WorkspaceFileOrigin } from "@/features/workspace/model";
 
 interface OpenTab {
   name: string;
   path: string;
   content: string;
   language?: string;
+  origin: WorkspaceFileOrigin;
+  linkedProjectId?: string;
 }
 
 interface CodeEditorProps {
@@ -138,6 +141,8 @@ export const CodeEditor = ({ openTabs, activeTab, onTabSelect, onTabClose, onCon
   }
 
   const lines = activeFile.content.split("\n");
+  const originLabel =
+    activeFile.origin === "linked" ? "Linked" : activeFile.origin === "local" ? "Local" : "Remote";
 
   return (
     <div className="flex h-full flex-col bg-ide-panel">
@@ -154,6 +159,9 @@ export const CodeEditor = ({ openTabs, activeTab, onTabSelect, onTabClose, onCon
             onClick={() => onTabSelect(tab.path)}
           >
             <span className="truncate max-w-32">{tab.name}</span>
+            <span className="rounded border border-white/20 px-1 text-[10px] uppercase tracking-wide">
+              {tab.origin === "linked" ? "LNK" : tab.origin === "local" ? "LOC" : "REM"}
+            </span>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -228,6 +236,7 @@ export const CodeEditor = ({ openTabs, activeTab, onTabSelect, onTabClose, onCon
       <div className="flex h-6 items-center justify-between border-t border-border bg-ide-header px-3 text-xs text-muted-foreground">
         <div className="flex gap-3">
           <span>{activeFile.language || "plaintext"}</span>
+          <span>{originLabel}</span>
           <span>UTF-8</span>
         </div>
         <div className="flex gap-3">
