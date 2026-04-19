@@ -1,11 +1,14 @@
 import { useCallback, useState } from "react";
 import { FileNode } from "@/components/ide/FileTree";
+import type { WorkspaceFileOrigin } from "@/features/workspace/model";
 
 export interface OpenTab {
   name: string;
   path: string;
   content: string;
   language?: string;
+  origin: WorkspaceFileOrigin;
+  linkedProjectId?: string;
 }
 
 export const useProjectViewerTabs = () => {
@@ -13,7 +16,11 @@ export const useProjectViewerTabs = () => {
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | undefined>();
 
-  const handleFileSelect = useCallback((file: FileNode, path: string) => {
+  const handleFileSelect = useCallback((
+    file: FileNode,
+    path: string,
+    metadata?: { origin?: WorkspaceFileOrigin; linkedProjectId?: string },
+  ) => {
     if (file.type !== "file") return;
     setSelectedPath(path);
 
@@ -28,6 +35,8 @@ export const useProjectViewerTabs = () => {
       path,
       content: file.content || "",
       language: file.language,
+      origin: metadata?.origin ?? "remote",
+      linkedProjectId: metadata?.linkedProjectId,
     };
 
     setOpenTabs((previousTabs) => [...previousTabs, newTab]);
