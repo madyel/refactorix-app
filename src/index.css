@@ -7,6 +7,68 @@
 
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 210 100% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 270 60% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 210 100% 56%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 210 100% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 210 100% 56%;
+
+    /* IDE-specific tokens */
+    --ide-panel-bg: 0 0% 100%;
+    --ide-panel-header: 210 40% 98%;
+    --ide-tab-active: 0 0% 100%;
+    --ide-tab-inactive: 210 40% 96%;
+    --ide-line-number: 215 16% 47%;
+    --ide-line-highlight: 210 40% 96%;
+    --ide-selection: 210 100% 56% / 0.2;
+    --ide-success: 142 72% 50%;
+    --ide-warning: 38 92% 50%;
+    --ide-info: 210 100% 56%;
+    --ide-keyword: 270 60% 68%;
+    --ide-string: 142 60% 55%;
+    --ide-function: 38 100% 68%;
+    --ide-comment: 215 16% 47%;
+    --ide-type: 180 70% 60%;
+    --ide-number: 30 80% 65%;
+    --ide-variable: 222 47% 11%;
+
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  .dark {
     --background: 220 13% 10%;
     --foreground: 220 13% 90%;
 
@@ -16,56 +78,29 @@
     --popover: 220 13% 14%;
     --popover-foreground: 220 13% 90%;
 
-    --primary: 210 100% 56%;
-    --primary-foreground: 0 0% 100%;
-
     --secondary: 220 13% 16%;
     --secondary-foreground: 220 13% 80%;
 
     --muted: 220 13% 18%;
     --muted-foreground: 220 13% 55%;
 
-    --accent: 270 60% 60%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
     --border: 220 13% 20%;
     --input: 220 13% 18%;
-    --ring: 210 100% 56%;
-
-    --radius: 0.5rem;
 
     --sidebar-background: 220 13% 8%;
     --sidebar-foreground: 220 13% 70%;
-    --sidebar-primary: 210 100% 56%;
-    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 13% 14%;
     --sidebar-accent-foreground: 220 13% 90%;
     --sidebar-border: 220 13% 16%;
-    --sidebar-ring: 210 100% 56%;
 
-    /* IDE-specific tokens */
     --ide-panel-bg: 220 13% 10%;
     --ide-panel-header: 220 13% 12%;
     --ide-tab-active: 220 13% 10%;
     --ide-tab-inactive: 220 13% 14%;
     --ide-line-number: 220 13% 35%;
     --ide-line-highlight: 220 13% 14%;
-    --ide-selection: 210 100% 56% / 0.2;
-    --ide-success: 142 72% 50%;
-    --ide-warning: 38 92% 50%;
-    --ide-info: 210 100% 56%;
-    --ide-keyword: 270 60% 68%;
-    --ide-string: 142 60% 55%;
-    --ide-function: 38 100% 68%;
     --ide-comment: 220 10% 40%;
-    --ide-type: 180 70% 60%;
-    --ide-number: 30 80% 65%;
     --ide-variable: 220 13% 85%;
-
-    font-family: 'Inter', system-ui, sans-serif;
   }
 }
 
