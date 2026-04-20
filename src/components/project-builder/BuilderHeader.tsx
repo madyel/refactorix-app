@@ -10,7 +10,7 @@ const topLinks = [
 
 export const BuilderHeader = () => {
   return (
-    <header className="mb-8 space-y-10">
+    <header className="mb-8">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3 text-slate-100">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/5">
@@ -38,23 +38,10 @@ export const BuilderHeader = () => {
           <button type="button" className="transition hover:text-white">
             <Bell className="h-4 w-4" />
           </button>
-          <button
-            type="button"
-            className="text-slate-200 transition hover:text-white"
-          >
+          <button type="button" className="text-slate-200 transition hover:text-white">
             <UserCircle2 className="h-6 w-6" />
           </button>
         </div>
-      </div>
-
-      <div className="mx-auto max-w-4xl space-y-3 text-center">
-        <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
-          Ciao Deploy Leader, che progetto vuoi creare oggi?
-        </h1>
-        <p className="text-base text-slate-400 md:text-lg">
-          Definisci progetto, stack e feature in un unico flusso per generare il
-          framework software.
-        </p>
       </div>
     </header>
   );
